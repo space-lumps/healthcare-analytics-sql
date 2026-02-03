@@ -1,0 +1,5 @@
+.DS_Store
+output/
+datasets/*.csv
+*.log
+.env
