@@ -176,6 +176,14 @@ FROM pragma_table_info('procedures');
 --   - use a DuckDB macro / generated SQL (still within DuckDB), or
 --   - run via a small driver script and materialize results.
 
+-- E1) Full-column profile (includes null stats) via DuckDB SUMMARIZE
+-- Note: this prints one result set per table.
+SUMMARIZE allergies;
+SUMMARIZE encounters;
+SUMMARIZE medications;
+SUMMARIZE patients;
+SUMMARIZE procedures;
+
 -----------------------------------------------------------------------
 -- F) 'NA' (string) profiling
 -----------------------------------------------------------------------
@@ -239,7 +247,10 @@ FROM pragma_table_info('procedures');
 -- TODO: Record:
 -- - row counts per table
 -- - key columns + inferred types
+	-- - inferred types are recorded in output/inferred_types_snapshot.csv
 -- - columns with high null/%NA rates
+	-- - there are no nulls
+	-- - instead there is 'NA'
 -- - any obvious data quality issues (duplicates, malformed dates, etc.)
 
 
