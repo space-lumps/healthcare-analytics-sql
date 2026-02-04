@@ -1,0 +1,24 @@
+,Column Name,Data Type,Required?,Description
+,Id,UUID,TRUE,Primary Key. Unique Identifier of the patient.
+,BirthDate,Date (YYYY-MM-DD),TRUE,The date the patient was born.
+,DeathDate,Date (YYYY-MM-DD),FALSE,The date the patient died.
+,SSN,String,TRUE,Patient Social Security identifier.
+,Drivers,String,FALSE,Patient Drivers License identifier.
+,Passport,String,FALSE,Patient Passport identifier.
+,Prefix,String,FALSE,"Name prefix, such as Mr., Mrs., Dr., etc."
+,First,String,TRUE,First name of the patient.
+,Last,String,TRUE,Last or surname of the patient.
+,Suffix,String,FALSE,"Name suffix, such as PhD, MD, JD, etc."
+,Maiden,String,FALSE,Maiden name of the patient.
+,Marital,String,FALSE,"Marital Status. M is married, S is single. Currently no support for divorce (D) or widowing (W)"
+,Race,String,TRUE,Description of the patient's primary race.
+,Ethnicity,String,TRUE,Description of the patient's primary ethnicity.
+,Gender,String,TRUE,"Gender. M is male, F is female."
+,BirthPlace,String,TRUE,Name of the town where the patient was born.
+,Address,String,TRUE,Patient's street address without commas or newlines.
+,City,String,TRUE,Patient's address city.
+,County,String,FALSE,Patient's address county.
+,State,String,TRUE,Patient's address state.
+,Zip,String,FALSE,Patient's zip code.
+,Lat,Numeric,FALSE,Latitude of Patient's address.
+,Lon,Numeric,FALSE,Longitude of Patient's address.

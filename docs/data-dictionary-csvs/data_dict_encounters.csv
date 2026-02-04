@@ -1,0 +1,12 @@
+,Column Name,Data Type,Required?,Description
+,Id,UUID,TRUE,Primary Key. Unique Identifier of the encounter.
+,Start,iso8601 UTC Date (yyyy-MM-dd'T'HH:mm'Z'),TRUE,The date and time the encounter started.
+,Stop,iso8601 UTC Date (yyyy-MM-dd'T'HH:mm'Z'),FALSE,The date and time the encounter concluded.
+,Patient,UUID,TRUE,Foreign key to the Patient.
+,Provider,UUID,TRUE,Foreign key to the Organization.
+,EncounterClass,String,TRUE,"The class of the encounter, such as ambulatory, emergency, inpatient, wellness, or urgentcare"
+,Code,String,TRUE,Encounter code from SNOMED-CT
+,Description,String,TRUE,Description of the type of encounter.
+,Cost,Numeric,TRUE,"The base cost of the encounter, not including any line item costs related to medications, immunizations, procedures, or other services."
+,ReasonCode,String,FALSE,"Diagnosis code from SNOMED-CT, only if this encounter targeted a specific condition."
+,ReasonDescription,String,FALSE,Description of the reason code.

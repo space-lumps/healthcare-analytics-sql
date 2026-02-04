@@ -1,0 +1,9 @@
+,Column Name,Data Type,Required?,Description
+,Date,Date (YYYY-MM-DD),TRUE,The date the procedure was performed.
+,Patient,UUID,TRUE,Foreign key to the Patient.
+,Encounter,UUID,TRUE,Foreign key to the Encounter where the procedure was performed.
+,Code,String,TRUE,Procedure code from SNOMED-CT
+,Description,String,TRUE,Description of the procedure.
+,Cost,Numeric,TRUE,The line item cost of the procedure.
+,ReasonCode,String,FALSE,Diagnosis code from SNOMED-CT specifying why this procedure was performed.
+,ReasonDescription,String,FALSE,Description of the reason code.
