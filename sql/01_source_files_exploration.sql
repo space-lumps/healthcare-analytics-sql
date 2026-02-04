@@ -195,6 +195,8 @@ SUMMARIZE procedures;
 -- - Only applies to VARCHAR columns; numeric/date columns may contain 'NA'
 --   only if inferred as VARCHAR.
 
+-- Since this logic is extensive, it will be placed in a new file, namely 02_source_files_exploration_NA.sql
+
 -----------------------------------------------------------------------
 -- G) Primary key candidates + date coverage (per dataset)
 -----------------------------------------------------------------------
