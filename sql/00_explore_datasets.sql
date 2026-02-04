@@ -76,17 +76,47 @@ FROM read_csv_auto(
 	, SAMPLE_SIZE = -1
 );
 
-/*
------------------------------------------------------------------------
-B) Summary report: row_count + column_count per dataset
------------------------------------------------------------------------
--- TODO: UNION ALL query returning:
---  - dataset (path string)
---  - row_count (COUNT(*))
---  - column_count (COUNT(*) from pragma_table_info)
 
 -----------------------------------------------------------------------
-C) Row samples (LIMIT N per dataset)
+-- B) Summary report: row_count + column_count per dataset
+-----------------------------------------------------------------------
+SELECT
+	'~/datasets/allergies.csv'                                  AS dataset
+	, (SELECT COUNT(*) FROM allergies)                          AS row_count
+	, (SELECT COUNT(*) FROM pragma_table_info('allergies'))     AS column_count
+
+UNION ALL
+
+SELECT
+	'~/datasets/encounters.csv'                                 AS dataset
+	, (SELECT COUNT(*) FROM encounters)                         AS row_count
+	, (SELECT COUNT(*) FROM pragma_table_info('encounters'))    AS column_count
+
+UNION ALL
+
+SELECT
+	'~/datasets/medications.csv'                                AS dataset
+	, (SELECT COUNT(*) FROM medications)                        AS row_count
+	, (SELECT COUNT(*) FROM pragma_table_info('medications'))   AS column_count
+
+UNION ALL
+
+SELECT
+	'~/datasets/patients.csv'                                   AS dataset
+	, (SELECT COUNT(*) FROM patients)                           AS row_count
+	, (SELECT COUNT(*) FROM pragma_table_info('patients'))      AS column_count
+
+UNION ALL
+
+SELECT
+	'~/datasets/procedures.csv'                                 AS dataset
+	, (SELECT COUNT(*) FROM procedures)                         AS row_count
+	, (SELECT COUNT(*) FROM pragma_table_info('procedures'))    AS column_count
+;
+
+/*
+-----------------------------------------------------------------------
+-- C) Row samples (LIMIT N per dataset)
 -----------------------------------------------------------------------
 -- TODO: SELECT * FROM allergies LIMIT 10;
 -- TODO: SELECT * FROM encounters LIMIT 10;
