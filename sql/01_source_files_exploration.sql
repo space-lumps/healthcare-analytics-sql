@@ -114,18 +114,20 @@ SELECT
 	, (SELECT COUNT(*) FROM pragma_table_info('procedures'))    AS column_count
 ;
 
-/*
+
 -----------------------------------------------------------------------
 -- C) Row samples (LIMIT N per dataset)
 -----------------------------------------------------------------------
--- TODO: SELECT * FROM allergies LIMIT 10;
--- TODO: SELECT * FROM encounters LIMIT 10;
--- TODO: SELECT * FROM medications LIMIT 10;
--- TODO: SELECT * FROM patients LIMIT 10;
--- TODO: SELECT * FROM procedures LIMIT 10;
 
+SELECT * FROM allergies LIMIT 10;
+SELECT * FROM encounters LIMIT 10;
+SELECT * FROM medications LIMIT 10;
+SELECT * FROM patients LIMIT 10;
+SELECT * FROM procedures LIMIT 10;
+
+/*
 -----------------------------------------------------------------------
-D) Datatype inspection (DuckDB inferred types)
+-- D) Datatype inspection (DuckDB inferred types)
 -----------------------------------------------------------------------
 -- TODO: SELECT * FROM pragma_table_info('allergies');
 -- TODO: SELECT * FROM pragma_table_info('encounters');
@@ -137,7 +139,7 @@ D) Datatype inspection (DuckDB inferred types)
 -- but are inferred as VARCHAR due to mixed values.
 
 -----------------------------------------------------------------------
-E) Null profiling
+-- E) Null profiling
 -----------------------------------------------------------------------
 -- Goal: for each table, produce a result set:
 --  column_name, null_count, total_rows, null_pct
@@ -151,7 +153,7 @@ E) Null profiling
 --   - run via a small driver script and materialize results.
 
 -----------------------------------------------------------------------
-F) 'NA' (string) profiling
+-- F) 'NA' (string) profiling
 -----------------------------------------------------------------------
 -- Goal: for each table, count values exactly equal to 'NA' (case-sensitive),
 -- by column. Same shape as null profiling.
@@ -162,7 +164,7 @@ F) 'NA' (string) profiling
 --   only if inferred as VARCHAR.
 
 -----------------------------------------------------------------------
-G) Primary key candidates + date coverage (per dataset)
+-- G) Primary key candidates + date coverage (per dataset)
 -----------------------------------------------------------------------
 -- Goal:
 -- For each dataset, report:
@@ -208,7 +210,7 @@ G) Primary key candidates + date coverage (per dataset)
 --  - min_date/max_date/null_date_count based on DATE
 
 -----------------------------------------------------------------------
-H) Notes / findings
+-- H) Notes / findings
 -----------------------------------------------------------------------
 -- TODO: Record:
 -- - row counts per table
