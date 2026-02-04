@@ -100,11 +100,60 @@ F) 'NA' (string) profiling
 --   only if inferred as VARCHAR.
 
 -----------------------------------------------------------------------
-G) Notes / findings
+G) Primary key candidates + date coverage (per dataset)
+-----------------------------------------------------------------------
+-- Goal:
+-- For each dataset, report:
+--  - row_count
+--  - distinct_pk (or distinct_pk_candidate for compound keys)
+--  - min_date, max_date (for the primary date column)
+--  - null_date_count
+--  - (optional) duplicate_count = row_count - distinct_pk_candidate
+--
+-- Notes:
+-- - Some tables use a natural compound key (PATIENT + ENCOUNTER + CODE + START/DATE).
+-- - Some tables have a single Id column suitable as a PK.
+-- - Date columns differ by table (e.g., START, DATE, BIRTHDATE).
+
+-- allergies
+-- TODO:
+--  - distinct_pk_candidate = concat_ws('|', PATIENT, ENCOUNTER, CODE, START)
+--  - identify duplicate rows (row_count - distinct_pk_candidate)
+--  - min_date/max_date/null_date_count based on START
+
+-- encounters
+-- TODO:
+--  - distinct_pk = COUNT(DISTINCT Id)
+--  - identify duplicate rows (row_count - distinct_pk_candidate)
+--  - min_date/max_date/null_date_count based on START
+
+-- medications
+-- TODO:
+--  - distinct_pk_candidate = concat_ws('|', PATIENT, ENCOUNTER, CODE, START)
+--  - identify duplicate rows (row_count - distinct_pk_candidate)
+--  - optional: create a deduped view (SELECT DISTINCT ...) and report counts + date range
+
+-- patients
+-- TODO:
+--  - distinct_pk = COUNT(DISTINCT Id)
+--  - identify duplicate rows (row_count - distinct_pk_candidate)
+--  - min_date/max_date/null_date_count based on BIRTHDATE
+
+-- procedures
+-- TODO:
+--  - distinct_pk_candidate = concat_ws('|', PATIENT, ENCOUNTER, CODE, DATE)
+--  - identify duplicate rows (row_count - distinct_pk_candidate)
+--  - min_date/max_date/null_date_count based on DATE
+
+-----------------------------------------------------------------------
+H) Notes / findings
 -----------------------------------------------------------------------
 -- TODO: Record:
 -- - row counts per table
 -- - key columns + inferred types
 -- - columns with high null/%NA rates
 -- - any obvious data quality issues (duplicates, malformed dates, etc.)
+
 */
+
+
