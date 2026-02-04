@@ -125,15 +125,39 @@ SELECT * FROM medications LIMIT 10;
 SELECT * FROM patients LIMIT 10;
 SELECT * FROM procedures LIMIT 10;
 
-/*
+
 -----------------------------------------------------------------------
 -- D) Datatype inspection (DuckDB inferred types)
 -----------------------------------------------------------------------
--- TODO: SELECT * FROM pragma_table_info('allergies');
--- TODO: SELECT * FROM pragma_table_info('encounters');
--- TODO: SELECT * FROM pragma_table_info('medications');
--- TODO: SELECT * FROM pragma_table_info('patients');
--- TODO: SELECT * FROM pragma_table_info('procedures');
+
+SELECT
+	'allergies' AS dataset
+	, *
+FROM pragma_table_info('allergies');
+
+SELECT
+	'encounters' AS dataset
+	, *
+FROM pragma_table_info('encounters');
+--NOTES:
+--"START" is type TIMESTAMP
+--"STOP" is type TIMESTAMP
+
+SELECT
+	'medications' AS dataset
+	, *
+FROM pragma_table_info('medications');
+
+SELECT
+	'patients' AS dataset
+	, *
+FROM pragma_table_info('patients');
+
+SELECT
+	'procedures' AS dataset
+	, *
+FROM pragma_table_info('procedures');
+
 
 -- TODO (later): Identify columns that should be DATE/TIMESTAMP/INT/BOOL
 -- but are inferred as VARCHAR due to mixed values.
@@ -218,6 +242,6 @@ SELECT * FROM procedures LIMIT 10;
 -- - columns with high null/%NA rates
 -- - any obvious data quality issues (duplicates, malformed dates, etc.)
 
-*/
+
 
 
