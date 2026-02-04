@@ -212,36 +212,186 @@ SUMMARIZE procedures;
 -- - Some tables use a natural compound key (PATIENT + ENCOUNTER + CODE + START/DATE).
 -- - Some tables have a single Id column suitable as a PK.
 -- - Date columns differ by table (e.g., START, DATE, BIRTHDATE).
+-----------------------------------------------------------------------
+-- G) Primary key candidates + date coverage (per dataset)
+-----------------------------------------------------------------------
+-- Assumes typed temp views already exist:
+--   allergies, encounters, medications, patients, procedures
+-----------------------------------------------------------------------
 
 -- allergies
--- TODO:
---  - distinct_pk_candidate = concat_ws('|', PATIENT, ENCOUNTER, CODE, START)
---  - identify duplicate rows (row_count - distinct_pk_candidate)
---  - min_date/max_date/null_date_count based on START
+-- result: row_count and distinct_pk_count are equivalent
+WITH src AS (
+	SELECT *
+	FROM allergies
+)
+SELECT
+	'allergies' AS dataset
+	, COUNT(*) AS row_count
+	, COUNT(
+		DISTINCT concat_ws(
+			'|'
+			, "PATIENT"
+			, "ENCOUNTER"
+			, CAST("CODE" AS VARCHAR)
+			, CAST("START" AS VARCHAR)
+		)
+	) AS distinct_pk_candidate
+	, COUNT(*) - COUNT(
+		DISTINCT concat_ws(
+			'|'
+			, "PATIENT"
+			, "ENCOUNTER"
+			, CAST("CODE" AS VARCHAR)
+			, CAST("START" AS VARCHAR)
+		)
+	) AS duplicate_count
+	, MIN("START") AS min_date
+	, MAX("START") AS max_date
+	, COUNT(*) - COUNT("START") AS null_date_count
+FROM src;
 
 -- encounters
--- TODO:
---  - distinct_pk = COUNT(DISTINCT Id)
---  - identify duplicate rows (row_count - distinct_pk_candidate)
---  - min_date/max_date/null_date_count based on START
+-- result: row_count and distinct_pw are equivalent
+WITH src AS (
+	SELECT *
+	FROM encounters
+)
+SELECT
+	'encounters' AS dataset
+	, COUNT(*) AS row_count
+	, COUNT(DISTINCT "Id") AS distinct_pk
+	, COUNT(*) - COUNT(DISTINCT "Id") AS duplicate_count
+	--, MIN("START") AS min_date
+	--, MAX("START") AS max_date
+	, COUNT(*) - COUNT("START") AS null_date_count
+FROM src;
 
 -- medications
--- TODO:
---  - distinct_pk_candidate = concat_ws('|', PATIENT, ENCOUNTER, CODE, START)
---  - identify duplicate rows (row_count - distinct_pk_candidate)
---  - optional: create a deduped view (SELECT DISTINCT ...) and report counts + date range
+-- result: row_count - distinct_pk_candidate = 26 ********** investigate this later
+WITH src AS (
+	SELECT *
+	FROM medications
+)
+SELECT
+	'medications' AS dataset
+	, COUNT(*) AS row_count
+	, COUNT(
+		DISTINCT concat_ws(
+			'|'
+			, "PATIENT"
+			, "ENCOUNTER"
+			, CAST("CODE" AS VARCHAR)
+			, CAST("START" AS VARCHAR)
+		)
+	) AS distinct_pk_candidate
+	, COUNT(*) - COUNT(
+		DISTINCT concat_ws(
+			'|'
+			, "PATIENT"
+			, "ENCOUNTER"
+			, CAST("CODE" AS VARCHAR)
+			, CAST("START" AS VARCHAR)
+		)
+	) AS duplicate_count
+	, MIN("START") AS min_date
+	, MAX("START") AS max_date
+	, COUNT(*) - COUNT("START") AS null_date_count
+FROM src;
+
+-- medications deduped (optional)
+-- result: row_count and distinct_pk_candidate are equivalent
+WITH medications_src AS (
+	SELECT *
+	FROM medications
+)
+, medications_deduped AS (
+	SELECT DISTINCT
+		"PATIENT"
+		, "ENCOUNTER"
+		, "CODE"
+		, "DESCRIPTION"
+		, "START"
+		, "STOP"
+		, "COST"
+		, "DISPENSES"
+		, "TOTALCOST"
+		, "REASONCODE"
+		, "REASONDESCRIPTION"
+	FROM medications_src
+)
+SELECT
+	'medications_deduped' AS dataset
+	, COUNT(*) AS row_count
+	, COUNT(
+		DISTINCT concat_ws(
+			'|'
+			, "PATIENT"
+			, "ENCOUNTER"
+			, CAST("CODE" AS VARCHAR)
+			, CAST("START" AS VARCHAR)
+		)
+	) AS distinct_pk_candidate
+	, COUNT(*) - COUNT(
+		DISTINCT concat_ws(
+			'|'
+			, "PATIENT"
+			, "ENCOUNTER"
+			, CAST("CODE" AS VARCHAR)
+			, CAST("START" AS VARCHAR)
+		)
+	) AS duplicate_count
+	, MIN("START") AS min_date
+	, MAX("START") AS max_date
+	, COUNT(*) - COUNT("START") AS null_date_count
+FROM medications_deduped;
 
 -- patients
--- TODO:
---  - distinct_pk = COUNT(DISTINCT Id)
---  - identify duplicate rows (row_count - distinct_pk_candidate)
---  - min_date/max_date/null_date_count based on BIRTHDATE
+WITH src AS (
+	SELECT *
+	FROM patients
+)
+SELECT
+	'patients' AS dataset
+	, COUNT(*) AS row_count
+	, COUNT(DISTINCT "Id") AS distinct_pk
+	, COUNT(*) - COUNT(DISTINCT "Id") AS duplicate_count
+	, MIN("BIRTHDATE") AS min_date
+	, MAX("BIRTHDATE") AS max_date
+	, COUNT(*) - COUNT("BIRTHDATE") AS null_date_count
+FROM src;
 
 -- procedures
--- TODO:
---  - distinct_pk_candidate = concat_ws('|', PATIENT, ENCOUNTER, CODE, DATE)
---  - identify duplicate rows (row_count - distinct_pk_candidate)
---  - min_date/max_date/null_date_count based on DATE
+-- result: row_count and distinct_pk_candidate are equivalent
+WITH src AS (
+	SELECT *
+	FROM procedures
+)
+SELECT
+	'procedures' AS dataset
+	, COUNT(*) AS row_count
+	, COUNT(
+		DISTINCT concat_ws(
+			'|'
+			, "PATIENT.x"
+			, "ENCOUNTER"
+			, "CODE.x"
+			, CAST("DATE" AS VARCHAR)
+		)
+	) AS distinct_pk_candidate
+	, COUNT(*) - COUNT(
+		DISTINCT concat_ws(
+			'|'
+			, "PATIENT.x"
+			, "ENCOUNTER"
+			, "CODE.x"
+			, CAST("DATE" AS VARCHAR)
+		)
+	) AS duplicate_count
+	, MIN("DATE") AS min_date
+	, MAX("DATE") AS max_date
+	, COUNT(*) - COUNT("DATE") AS null_date_count
+FROM src;
 
 -----------------------------------------------------------------------
 -- H) Notes / findings
