@@ -2,4 +2,4 @@
 datasets/*.csv
 *.log
 .env
-docs/data-dictionary.xlsx
+docs/data-dictionary.xlsx*.duckdb
