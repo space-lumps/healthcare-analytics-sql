@@ -35,16 +35,48 @@ D) Datatype inspection (pragma_table_info)
 E) Null profiling (per table, per column)
 F) 'NA' profiling (per table, per column)
 G) Notes / findings (to be filled after running)
+*/
 
 -----------------------------------------------------------------------
-A) Register datasets as temp views
+-- A) Register datasets as temp views
 -----------------------------------------------------------------------
--- TODO: CREATE OR REPLACE TEMP VIEW allergies AS ... read_csv_auto(...)
--- TODO: CREATE OR REPLACE TEMP VIEW encounters AS ... read_csv_auto(...)
--- TODO: CREATE OR REPLACE TEMP VIEW medications AS ... read_csv_auto(...)
--- TODO: CREATE OR REPLACE TEMP VIEW patients AS ... read_csv_auto(...)
--- TODO: CREATE OR REPLACE TEMP VIEW procedures AS ... read_csv_auto(...)
 
+CREATE OR REPLACE TEMP VIEW allergies AS
+SELECT *
+FROM read_csv_auto(
+	'~/datasets/allergies.csv'
+	, SAMPLE_SIZE = -1
+);
+
+CREATE OR REPLACE TEMP VIEW encounters AS
+SELECT *
+FROM read_csv_auto(
+	'~/datasets/encounters.csv'
+	, SAMPLE_SIZE = -1
+);
+
+CREATE OR REPLACE TEMP VIEW medications AS
+SELECT *
+FROM read_csv_auto(
+	'~/datasets/medications.csv'
+	, SAMPLE_SIZE = -1
+);
+
+CREATE OR REPLACE TEMP VIEW patients AS
+SELECT *
+FROM read_csv_auto(
+	'~/datasets/patients.csv'
+	, SAMPLE_SIZE = -1
+);
+
+CREATE OR REPLACE TEMP VIEW procedures AS
+SELECT *
+FROM read_csv_auto(
+	'~/datasets/procedures.csv'
+	, SAMPLE_SIZE = -1
+);
+
+/*
 -----------------------------------------------------------------------
 B) Summary report: row_count + column_count per dataset
 -----------------------------------------------------------------------
