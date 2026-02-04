@@ -20,11 +20,11 @@ Constraints
 
 Inputs (relative paths)
 -----------------------
-- ~/datasets/allergies.csv
-- ~/datasets/encounters.csv
-- ~/datasets/medications.csv
-- ~/datasets/patients.csv
-- ~/datasets/procedures.csv
+- datasets/allergies.csv
+- datasets/encounters.csv
+- datasets/medications.csv
+- datasets/patients.csv
+- datasets/procedures.csv
 
 Sections
 --------
@@ -44,35 +44,35 @@ G) Notes / findings (to be filled after running)
 CREATE OR REPLACE TEMP VIEW allergies AS
 SELECT *
 FROM read_csv_auto(
-	'~/datasets/allergies.csv'
+	'datasets/allergies.csv'
 	, SAMPLE_SIZE = -1
 );
 
 CREATE OR REPLACE TEMP VIEW encounters AS
 SELECT *
 FROM read_csv_auto(
-	'~/datasets/encounters.csv'
+	'datasets/encounters.csv'
 	, SAMPLE_SIZE = -1
 );
 
 CREATE OR REPLACE TEMP VIEW medications AS
 SELECT *
 FROM read_csv_auto(
-	'~/datasets/medications.csv'
+	'datasets/medications.csv'
 	, SAMPLE_SIZE = -1
 );
 
 CREATE OR REPLACE TEMP VIEW patients AS
 SELECT *
 FROM read_csv_auto(
-	'~/datasets/patients.csv'
+	'datasets/patients.csv'
 	, SAMPLE_SIZE = -1
 );
 
 CREATE OR REPLACE TEMP VIEW procedures AS
 SELECT *
 FROM read_csv_auto(
-	'~/datasets/procedures.csv'
+	'datasets/procedures.csv'
 	, SAMPLE_SIZE = -1
 );
 
@@ -81,35 +81,35 @@ FROM read_csv_auto(
 -- B) Summary report: row_count + column_count per dataset
 -----------------------------------------------------------------------
 SELECT
-	'~/datasets/allergies.csv'                                  AS dataset
+	'datasets/allergies.csv'                                  AS dataset
 	, (SELECT COUNT(*) FROM allergies)                          AS row_count
 	, (SELECT COUNT(*) FROM pragma_table_info('allergies'))     AS column_count
 
 UNION ALL
 
 SELECT
-	'~/datasets/encounters.csv'                                 AS dataset
+	'datasets/encounters.csv'                                 AS dataset
 	, (SELECT COUNT(*) FROM encounters)                         AS row_count
 	, (SELECT COUNT(*) FROM pragma_table_info('encounters'))    AS column_count
 
 UNION ALL
 
 SELECT
-	'~/datasets/medications.csv'                                AS dataset
+	'datasets/medications.csv'                                AS dataset
 	, (SELECT COUNT(*) FROM medications)                        AS row_count
 	, (SELECT COUNT(*) FROM pragma_table_info('medications'))   AS column_count
 
 UNION ALL
 
 SELECT
-	'~/datasets/patients.csv'                                   AS dataset
+	'datasets/patients.csv'                                   AS dataset
 	, (SELECT COUNT(*) FROM patients)                           AS row_count
 	, (SELECT COUNT(*) FROM pragma_table_info('patients'))      AS column_count
 
 UNION ALL
 
 SELECT
-	'~/datasets/procedures.csv'                                 AS dataset
+	'datasets/procedures.csv'                                 AS dataset
 	, (SELECT COUNT(*) FROM procedures)                         AS row_count
 	, (SELECT COUNT(*) FROM pragma_table_info('procedures'))    AS column_count
 ;
