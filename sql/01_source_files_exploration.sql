@@ -44,36 +44,36 @@ G) Notes / findings (to be filled after running)
 CREATE OR REPLACE TEMP VIEW allergies AS
 SELECT *
 FROM read_csv_auto(
-	'datasets/allergies.csv'
-	, SAMPLE_SIZE = -1
+    'datasets/allergies.csv'
+    , SAMPLE_SIZE = -1
 );
 
 CREATE OR REPLACE TEMP VIEW encounters AS
 SELECT *
 FROM read_csv_auto(
-	'datasets/encounters.csv'
-	, SAMPLE_SIZE = -1
+    'datasets/encounters.csv'
+    , SAMPLE_SIZE = -1
 );
 
 CREATE OR REPLACE TEMP VIEW medications AS
 SELECT *
 FROM read_csv_auto(
-	'datasets/medications.csv'
-	, SAMPLE_SIZE = -1
+    'datasets/medications.csv'
+    , SAMPLE_SIZE = -1
 );
 
 CREATE OR REPLACE TEMP VIEW patients AS
 SELECT *
 FROM read_csv_auto(
-	'datasets/patients.csv'
-	, SAMPLE_SIZE = -1
+    'datasets/patients.csv'
+    , SAMPLE_SIZE = -1
 );
 
 CREATE OR REPLACE TEMP VIEW procedures AS
 SELECT *
 FROM read_csv_auto(
-	'datasets/procedures.csv'
-	, SAMPLE_SIZE = -1
+    'datasets/procedures.csv'
+    , SAMPLE_SIZE = -1
 );
 
 
@@ -81,37 +81,37 @@ FROM read_csv_auto(
 -- B) Summary report: row_count + column_count per dataset
 -----------------------------------------------------------------------
 SELECT
-	'datasets/allergies.csv'                                  AS dataset
-	, (SELECT COUNT(*) FROM allergies)                          AS row_count
-	, (SELECT COUNT(*) FROM pragma_table_info('allergies'))     AS column_count
+    'datasets/allergies.csv'                                  AS dataset
+    , (SELECT COUNT(*) FROM allergies)                          AS row_count
+    , (SELECT COUNT(*) FROM pragma_table_info('allergies'))     AS column_count
 
 UNION ALL
 
 SELECT
-	'datasets/encounters.csv'                                 AS dataset
-	, (SELECT COUNT(*) FROM encounters)                         AS row_count
-	, (SELECT COUNT(*) FROM pragma_table_info('encounters'))    AS column_count
+    'datasets/encounters.csv'                                 AS dataset
+    , (SELECT COUNT(*) FROM encounters)                         AS row_count
+    , (SELECT COUNT(*) FROM pragma_table_info('encounters'))    AS column_count
 
 UNION ALL
 
 SELECT
-	'datasets/medications.csv'                                AS dataset
-	, (SELECT COUNT(*) FROM medications)                        AS row_count
-	, (SELECT COUNT(*) FROM pragma_table_info('medications'))   AS column_count
+    'datasets/medications.csv'                                AS dataset
+    , (SELECT COUNT(*) FROM medications)                        AS row_count
+    , (SELECT COUNT(*) FROM pragma_table_info('medications'))   AS column_count
 
 UNION ALL
 
 SELECT
-	'datasets/patients.csv'                                   AS dataset
-	, (SELECT COUNT(*) FROM patients)                           AS row_count
-	, (SELECT COUNT(*) FROM pragma_table_info('patients'))      AS column_count
+    'datasets/patients.csv'                                   AS dataset
+    , (SELECT COUNT(*) FROM patients)                           AS row_count
+    , (SELECT COUNT(*) FROM pragma_table_info('patients'))      AS column_count
 
 UNION ALL
 
 SELECT
-	'datasets/procedures.csv'                                 AS dataset
-	, (SELECT COUNT(*) FROM procedures)                         AS row_count
-	, (SELECT COUNT(*) FROM pragma_table_info('procedures'))    AS column_count
+    'datasets/procedures.csv'                                 AS dataset
+    , (SELECT COUNT(*) FROM procedures)                         AS row_count
+    , (SELECT COUNT(*) FROM pragma_table_info('procedures'))    AS column_count
 ;
 
 
@@ -131,31 +131,31 @@ SELECT * FROM procedures LIMIT 10;
 -----------------------------------------------------------------------
 
 SELECT
-	'allergies' AS dataset
-	, *
+    'allergies' AS dataset
+    , *
 FROM pragma_table_info('allergies');
 
 SELECT
-	'encounters' AS dataset
-	, *
+    'encounters' AS dataset
+    , *
 FROM pragma_table_info('encounters');
 --NOTES:
 --"START" is type TIMESTAMP
 --"STOP" is type TIMESTAMP
 
 SELECT
-	'medications' AS dataset
-	, *
+    'medications' AS dataset
+    , *
 FROM pragma_table_info('medications');
 
 SELECT
-	'patients' AS dataset
-	, *
+    'patients' AS dataset
+    , *
 FROM pragma_table_info('patients');
 
 SELECT
-	'procedures' AS dataset
-	, *
+    'procedures' AS dataset
+    , *
 FROM pragma_table_info('procedures');
 
 
@@ -222,175 +222,175 @@ SUMMARIZE procedures;
 -- allergies
 -- result: row_count and distinct_pk_count are equivalent
 WITH src AS (
-	SELECT *
-	FROM allergies
+    SELECT *
+    FROM allergies
 )
 SELECT
-	'allergies' AS dataset
-	, COUNT(*) AS row_count
-	, COUNT(
-		DISTINCT concat_ws(
-			'|'
-			, "PATIENT"
-			, "ENCOUNTER"
-			, CAST("CODE" AS VARCHAR)
-			, CAST("START" AS VARCHAR)
-		)
-	) AS distinct_pk_candidate
-	, COUNT(*) - COUNT(
-		DISTINCT concat_ws(
-			'|'
-			, "PATIENT"
-			, "ENCOUNTER"
-			, CAST("CODE" AS VARCHAR)
-			, CAST("START" AS VARCHAR)
-		)
-	) AS duplicate_count
-	, MIN("START") AS min_date
-	, MAX("START") AS max_date
-	, COUNT(*) - COUNT("START") AS null_date_count
+    'allergies' AS dataset
+    , COUNT(*) AS row_count
+    , COUNT(
+        DISTINCT concat_ws(
+            '|'
+            , "PATIENT"
+            , "ENCOUNTER"
+            , CAST("CODE" AS VARCHAR)
+            , CAST("START" AS VARCHAR)
+        )
+    ) AS distinct_pk_candidate
+    , COUNT(*) - COUNT(
+        DISTINCT concat_ws(
+            '|'
+            , "PATIENT"
+            , "ENCOUNTER"
+            , CAST("CODE" AS VARCHAR)
+            , CAST("START" AS VARCHAR)
+        )
+    ) AS duplicate_count
+    , MIN("START") AS min_date
+    , MAX("START") AS max_date
+    , COUNT(*) - COUNT("START") AS null_date_count
 FROM src;
 
 -- encounters
 -- result: row_count and distinct_pw are equivalent
 WITH src AS (
-	SELECT *
-	FROM encounters
+    SELECT *
+    FROM encounters
 )
 SELECT
-	'encounters' AS dataset
-	, COUNT(*) AS row_count
-	, COUNT(DISTINCT "Id") AS distinct_pk
-	, COUNT(*) - COUNT(DISTINCT "Id") AS duplicate_count
-	--, MIN("START") AS min_date
-	--, MAX("START") AS max_date
-	, COUNT(*) - COUNT("START") AS null_date_count
+    'encounters' AS dataset
+    , COUNT(*) AS row_count
+    , COUNT(DISTINCT "Id") AS distinct_pk
+    , COUNT(*) - COUNT(DISTINCT "Id") AS duplicate_count
+    --, MIN("START") AS min_date
+    --, MAX("START") AS max_date
+    , COUNT(*) - COUNT("START") AS null_date_count
 FROM src;
 
 -- medications
 -- result: row_count - distinct_pk_candidate = 26 ********** investigate this later
 WITH src AS (
-	SELECT *
-	FROM medications
+    SELECT *
+    FROM medications
 )
 SELECT
-	'medications' AS dataset
-	, COUNT(*) AS row_count
-	, COUNT(
-		DISTINCT concat_ws(
-			'|'
-			, "PATIENT"
-			, "ENCOUNTER"
-			, CAST("CODE" AS VARCHAR)
-			, CAST("START" AS VARCHAR)
-		)
-	) AS distinct_pk_candidate
-	, COUNT(*) - COUNT(
-		DISTINCT concat_ws(
-			'|'
-			, "PATIENT"
-			, "ENCOUNTER"
-			, CAST("CODE" AS VARCHAR)
-			, CAST("START" AS VARCHAR)
-		)
-	) AS duplicate_count
-	, MIN("START") AS min_date
-	, MAX("START") AS max_date
-	, COUNT(*) - COUNT("START") AS null_date_count
+    'medications' AS dataset
+    , COUNT(*) AS row_count
+    , COUNT(
+        DISTINCT concat_ws(
+            '|'
+            , "PATIENT"
+            , "ENCOUNTER"
+            , CAST("CODE" AS VARCHAR)
+            , CAST("START" AS VARCHAR)
+        )
+    ) AS distinct_pk_candidate
+    , COUNT(*) - COUNT(
+        DISTINCT concat_ws(
+            '|'
+            , "PATIENT"
+            , "ENCOUNTER"
+            , CAST("CODE" AS VARCHAR)
+            , CAST("START" AS VARCHAR)
+        )
+    ) AS duplicate_count
+    , MIN("START") AS min_date
+    , MAX("START") AS max_date
+    , COUNT(*) - COUNT("START") AS null_date_count
 FROM src;
 
 -- medications deduped (optional)
 -- result: row_count and distinct_pk_candidate are equivalent
 WITH medications_src AS (
-	SELECT *
-	FROM medications
+    SELECT *
+    FROM medications
 )
 , medications_deduped AS (
-	SELECT DISTINCT
-		"PATIENT"
-		, "ENCOUNTER"
-		, "CODE"
-		, "DESCRIPTION"
-		, "START"
-		, "STOP"
-		, "COST"
-		, "DISPENSES"
-		, "TOTALCOST"
-		, "REASONCODE"
-		, "REASONDESCRIPTION"
-	FROM medications_src
+    SELECT DISTINCT
+        "PATIENT"
+        , "ENCOUNTER"
+        , "CODE"
+        , "DESCRIPTION"
+        , "START"
+        , "STOP"
+        , "COST"
+        , "DISPENSES"
+        , "TOTALCOST"
+        , "REASONCODE"
+        , "REASONDESCRIPTION"
+    FROM medications_src
 )
 SELECT
-	'medications_deduped' AS dataset
-	, COUNT(*) AS row_count
-	, COUNT(
-		DISTINCT concat_ws(
-			'|'
-			, "PATIENT"
-			, "ENCOUNTER"
-			, CAST("CODE" AS VARCHAR)
-			, CAST("START" AS VARCHAR)
-		)
-	) AS distinct_pk_candidate
-	, COUNT(*) - COUNT(
-		DISTINCT concat_ws(
-			'|'
-			, "PATIENT"
-			, "ENCOUNTER"
-			, CAST("CODE" AS VARCHAR)
-			, CAST("START" AS VARCHAR)
-		)
-	) AS duplicate_count
-	, MIN("START") AS min_date
-	, MAX("START") AS max_date
-	, COUNT(*) - COUNT("START") AS null_date_count
+    'medications_deduped' AS dataset
+    , COUNT(*) AS row_count
+    , COUNT(
+        DISTINCT concat_ws(
+            '|'
+            , "PATIENT"
+            , "ENCOUNTER"
+            , CAST("CODE" AS VARCHAR)
+            , CAST("START" AS VARCHAR)
+        )
+    ) AS distinct_pk_candidate
+    , COUNT(*) - COUNT(
+        DISTINCT concat_ws(
+            '|'
+            , "PATIENT"
+            , "ENCOUNTER"
+            , CAST("CODE" AS VARCHAR)
+            , CAST("START" AS VARCHAR)
+        )
+    ) AS duplicate_count
+    , MIN("START") AS min_date
+    , MAX("START") AS max_date
+    , COUNT(*) - COUNT("START") AS null_date_count
 FROM medications_deduped;
 
 -- patients
 WITH src AS (
-	SELECT *
-	FROM patients
+    SELECT *
+    FROM patients
 )
 SELECT
-	'patients' AS dataset
-	, COUNT(*) AS row_count
-	, COUNT(DISTINCT "Id") AS distinct_pk
-	, COUNT(*) - COUNT(DISTINCT "Id") AS duplicate_count
-	, MIN("BIRTHDATE") AS min_date
-	, MAX("BIRTHDATE") AS max_date
-	, COUNT(*) - COUNT("BIRTHDATE") AS null_date_count
+    'patients' AS dataset
+    , COUNT(*) AS row_count
+    , COUNT(DISTINCT "Id") AS distinct_pk
+    , COUNT(*) - COUNT(DISTINCT "Id") AS duplicate_count
+    , MIN("BIRTHDATE") AS min_date
+    , MAX("BIRTHDATE") AS max_date
+    , COUNT(*) - COUNT("BIRTHDATE") AS null_date_count
 FROM src;
 
 -- procedures
 -- result: row_count and distinct_pk_candidate are equivalent
 WITH src AS (
-	SELECT *
-	FROM procedures
+    SELECT *
+    FROM procedures
 )
 SELECT
-	'procedures' AS dataset
-	, COUNT(*) AS row_count
-	, COUNT(
-		DISTINCT concat_ws(
-			'|'
-			, "PATIENT.x"
-			, "ENCOUNTER"
-			, "CODE.x"
-			, CAST("DATE" AS VARCHAR)
-		)
-	) AS distinct_pk_candidate
-	, COUNT(*) - COUNT(
-		DISTINCT concat_ws(
-			'|'
-			, "PATIENT.x"
-			, "ENCOUNTER"
-			, "CODE.x"
-			, CAST("DATE" AS VARCHAR)
-		)
-	) AS duplicate_count
-	, MIN("DATE") AS min_date
-	, MAX("DATE") AS max_date
-	, COUNT(*) - COUNT("DATE") AS null_date_count
+    'procedures' AS dataset
+    , COUNT(*) AS row_count
+    , COUNT(
+        DISTINCT concat_ws(
+            '|'
+            , "PATIENT.x"
+            , "ENCOUNTER"
+            , "CODE.x"
+            , CAST("DATE" AS VARCHAR)
+        )
+    ) AS distinct_pk_candidate
+    , COUNT(*) - COUNT(
+        DISTINCT concat_ws(
+            '|'
+            , "PATIENT.x"
+            , "ENCOUNTER"
+            , "CODE.x"
+            , CAST("DATE" AS VARCHAR)
+        )
+    ) AS duplicate_count
+    , MIN("DATE") AS min_date
+    , MAX("DATE") AS max_date
+    , COUNT(*) - COUNT("DATE") AS null_date_count
 FROM src;
 
 -----------------------------------------------------------------------
@@ -399,10 +399,10 @@ FROM src;
 -- TODO: Record:
 -- - row counts per table
 -- - key columns + inferred types
-	-- - inferred types are recorded in output/inferred_types_snapshot.csv
+    -- - inferred types are recorded in output/inferred_types_snapshot.csv
 -- - columns with high null/%NA rates
-	-- - there are no nulls
-	-- - instead there is 'NA'
+    -- - there are no nulls
+    -- - instead there is 'NA'
 -- - any obvious data quality issues (duplicates, malformed dates, etc.)
 
 
