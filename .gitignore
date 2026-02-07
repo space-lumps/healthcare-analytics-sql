@@ -2,5 +2,6 @@
 datasets/*.csv
 *.log
 .env
-docs/data-dictionary.xlsx*.duckdb
+docs/data-dictionary.xlsx
 *.duckdb
+output/
