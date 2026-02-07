@@ -1,0 +1,32 @@
+-- ============================================================
+-- 10_normalize_sources.sql
+-- Purpose:
+--   Normalize raw CSV sources into typed, analysis-ready TEMP VIEWs.
+--   - Convert 'NA' placeholders to NULL (where applicable)
+--   - Cast date/timestamp fields to DATE
+--   - Deduplicate known-duplicated sources (medications)
+--
+-- Output:
+--   TEMP VIEWs used by downstream pipeline steps:
+--     - encounters
+--     - medications
+--     - patients
+--
+-- Notes:
+--   allergies and procedures are intentionally omitted (not used downstream).
+--   Keep this file limited to ingestion + typing + light normalization only.
+-- ============================================================
+
+-- CREATE OR REPLACE TEMP VIEW encounters
+--   - patient, id, start (DATE), stop (DATE), reasondescription
+--   - encounters.csv START/STOP are timestamps → parse TIMESTAMP → cast to DATE
+--   - 'NA' → NULL before casting
+
+-- CREATE OR REPLACE TEMP VIEW medications
+--   - patient, encounter, code, description, start (DATE), stop (DATE | NULL)
+--   - known duplicate rows → SELECT DISTINCT on full row
+--   - 'NA' handled via NULLSTR and/or TRY_CAST for nullable date fields
+
+-- CREATE OR REPLACE TEMP VIEW patients
+--   - id, birthdate (DATE), deathdate (DATE | NULL)
+--   - deathdate contains 'NA' → NULL → TRY_CAST
