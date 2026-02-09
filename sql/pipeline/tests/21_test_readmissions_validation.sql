@@ -7,12 +7,9 @@
 -- Assumptions:
 --   - 10_normalize_sources.sql has been executed
 --     (TEMP VIEWs: encounters, patients exist)
---   - 20_build_cohort.sql has been executed and its final output
---     is available as a TEMP VIEW or table you can join to.
---
---   IMPORTANT:
---   - Replace `cohort_output` below with the actual name of your
---     final cohort output (TEMP VIEW or table).
+--   - 20_build_cohort.sql has been executed and its final output 
+--     (drug_overdose_cohort) is available as a TEMP VIEW 
+--     or table you can join to.
 -- ============================================================
 
 WITH overdose_encounters AS (
@@ -87,37 +84,37 @@ WITH overdose_encounters AS (
 )
 ,comparison AS (
 	SELECT
-		cohort_output.patient_id
-		,cohort_output.encounter_id
+		drug_overdose_cohort.patient_id
+		,drug_overdose_cohort.encounter_id
 
-		,cohort_output.readmission_30_day_ind								AS readmission_30_day_ind_model
+		,drug_overdose_cohort.readmission_30_day_ind								AS readmission_30_day_ind_model
 		,recalc_readmissions.readmission_30_day_ind_recalc					AS readmission_30_day_ind_recalc
 
-		,cohort_output.readmission_90_day_ind								AS readmission_90_day_ind_model
+		,drug_overdose_cohort.readmission_90_day_ind								AS readmission_90_day_ind_model
 		,recalc_readmissions.readmission_90_day_ind_recalc					AS readmission_90_day_ind_recalc
 
-		,cohort_output.first_readmission_date								AS first_readmission_date_model
+		,drug_overdose_cohort.first_readmission_date								AS first_readmission_date_model
 		,recalc_readmissions.first_readmission_date_90						AS first_readmission_date_recalc
 
 		,CASE
-			WHEN cohort_output.readmission_30_day_ind IS DISTINCT FROM recalc_readmissions.readmission_30_day_ind_recalc
+			WHEN drug_overdose_cohort.readmission_30_day_ind IS DISTINCT FROM recalc_readmissions.readmission_30_day_ind_recalc
 			THEN 1 ELSE 0
 		END																	AS mismatch_30_ind
 
 		,CASE
-			WHEN cohort_output.readmission_90_day_ind IS DISTINCT FROM recalc_readmissions.readmission_90_day_ind_recalc
+			WHEN drug_overdose_cohort.readmission_90_day_ind IS DISTINCT FROM recalc_readmissions.readmission_90_day_ind_recalc
 			THEN 1 ELSE 0
 		END																	AS mismatch_90_ind
 
 		,CASE
-			WHEN cohort_output.first_readmission_date IS DISTINCT FROM recalc_readmissions.first_readmission_date_90
+			WHEN drug_overdose_cohort.first_readmission_date IS DISTINCT FROM recalc_readmissions.first_readmission_date_90
 			THEN 1 ELSE 0
 		END																	AS mismatch_first_date
 
-	FROM cohort_output
+	FROM drug_overdose_cohort
 	LEFT JOIN recalc_readmissions
-		ON recalc_readmissions.patient_id = cohort_output.patient_id
-		AND recalc_readmissions.encounter_id = cohort_output.encounter_id
+		ON recalc_readmissions.patient_id = drug_overdose_cohort.patient_id
+		AND recalc_readmissions.encounter_id = drug_overdose_cohort.encounter_id
 )
 
 -- Summary counts (should be all zeros for mismatches)

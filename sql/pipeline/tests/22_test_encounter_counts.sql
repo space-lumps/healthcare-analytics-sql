@@ -4,7 +4,7 @@ WITH encounters_per_patient AS (
 	SELECT
 		patient_id
 		,COUNT(DISTINCT encounter_id) AS encounter_count
-	FROM cohort_output
+	FROM drug_overdose_cohort
 	GROUP BY
 		patient_id
 )

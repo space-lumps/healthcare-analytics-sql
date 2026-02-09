@@ -26,7 +26,7 @@
 
 -- Define qualifying_encounters
 --   - filter encounters to drug overdose + date threshold
-CREATE OR REPLACE TEMP VIEW cohort_output AS
+CREATE OR REPLACE TEMP VIEW drug_overdose_cohort AS
 
 
 WITH qualifying_encounters AS (
@@ -89,9 +89,6 @@ WITH qualifying_encounters AS (
     )
 )
 
--- select count(*) from cohort;
-
-
 -- Define opioids_list
 --   - keyword/token list for opioid identification
 ,opioids_list AS (
@@ -118,8 +115,6 @@ WITH qualifying_encounters AS (
         ON LOWER(current_meds.medication_description)
             LIKE '%' || opioids_list.opioid_token || '%'
 )
--- select * from current_opioids limit 10;
-
 
 -- Define readmissions
 --   - first overdose readmission within 90 days
@@ -141,12 +136,13 @@ WITH qualifying_encounters AS (
         ,first_encounter.hospital_encounter_date
 )
 -- select count(*), count(distinct first_encounter_id) from readmissions;
+-- select * from readmissions;
 
 
--- Final SELECT
+-- Final normalization (as CTE)
 --   - aggregate to one row per patient_id + encounter_id
 --   - compute indicator and count columns
-,drug_overdose_cohort AS (
+,cohort_final AS (
     
     SELECT
         cohort.patient_id
@@ -211,13 +207,12 @@ WITH qualifying_encounters AS (
         ,readmissions.first_readmission_date
     )
 
-SELECT * FROM drug_overdose_cohort
+-- Final SELECT that defines TEMP VIEW cohort_output
+-- (the TEMP VIEW is created by the CREATE OR REPLACE statement above)
+SELECT * FROM cohort_final;
 
 
-;
-
-
-
--- select count(*) over() partition by(patient_id) ;
-
-
+-- ------------------------------------------------------------------
+-- Interactive inspection (outputs rows)
+-- ------------------------------------------------------------------
+-- SELECT * FROM drug_overdose_cohort limit 20;
