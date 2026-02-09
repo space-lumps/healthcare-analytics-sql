@@ -66,7 +66,27 @@ WITH qualifying_encounters AS (
 
 -- Define current_meds
 --   - medications active at encounter start
+,current_meds AS (
+    SELECT
+        cohort.patient_id
+        ,cohort.encounter_id
+        ,cohort.hospital_encounter_date
+        ,medications.code AS medication_code
+        ,medications.description AS medication_description
+        ,medications.start AS medication_start_date
+        ,medications.stop AS medication_stop_date
+    FROM medications
+    INNER JOIN cohort
+        ON medications.patient = cohort.patient_id
+    WHERE 1 = 1
+        AND medications.start < cohort.hospital_encounter_date
+        AND (
+            medications.stop IS NULL
+        OR  medications.stop >= cohort.hospital_encounter_date
+    )
+)
 
+select count(*) from cohort;
 -- Define opioids_list
 --   - keyword/token list for opioid identification
 
