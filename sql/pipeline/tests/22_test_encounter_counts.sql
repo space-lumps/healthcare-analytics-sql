@@ -1,4 +1,3 @@
-
 WITH encounters_per_patient AS (
 	SELECT
 		patient_id
