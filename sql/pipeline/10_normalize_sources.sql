@@ -39,21 +39,35 @@ FROM read_csv(
 --   - known duplicate rows → SELECT DISTINCT on full row
 --   - 'NA' handled via NULLSTR and/or TRY_CAST for nullable date fields
 CREATE OR REPLACE TEMP VIEW medications AS
-    SELECT
-        patient
-        ,encounter
-        ,code
-        ,description
-        ,TRY_CAST("START" AS DATE) AS start
-        ,TRY_CAST("STOP"  AS DATE) AS stop
+WITH medications_src AS (
+    SELECT *
     FROM read_csv_auto(
-        '../../datasets/medications.csv'
+        '../analyst-take-home-task/datasets/medications.csv'
         ,SAMPLE_SIZE = -1
         ,NULLSTR = 'NA'
         ,types = {
             'CODE':'VARCHAR'
         }
-    );
+    )
+)
+, medications_deduped AS (
+    SELECT DISTINCT
+        "PATIENT" AS patient
+        ,"ENCOUNTER" AS encounter
+        ,"CODE" AS code
+        ,"DESCRIPTION" AS description
+        ,TRY_CAST("START" AS DATE) AS start
+        ,TRY_CAST("STOP"  AS DATE) AS stop
+    FROM medications_src
+)
+SELECT
+    patient
+    ,encounter
+    ,code
+    ,description
+    ,start
+    ,stop
+FROM medications_deduped;
 
 
 -- CREATE OR REPLACE TEMP VIEW patients
