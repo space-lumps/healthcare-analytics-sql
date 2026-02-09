@@ -26,11 +26,43 @@
 
 -- Define qualifying_encounters
 --   - filter encounters to drug overdose + date threshold
+WITH qualifying_encounters AS (
+    SELECT
+        encounters.patient AS patient_id
+        ,encounters.id AS encounter_id
+        ,encounters.start AS hospital_encounter_date
+        ,encounters.stop AS encounter_end_date
+    FROM encounters
+    WHERE 1 = 1
+        AND encounters.reasondescription = 'Drug overdose'
+        AND encounters.start > DATE '1999-07-15'
+)
 
 -- Define cohort
 --   - join patients
 --   - compute age_at_visit
 --   - apply age filter
+,cohort AS (
+    SELECT
+        qualifying_encounters.patient_id
+        ,qualifying_encounters.encounter_id
+        ,qualifying_encounters.hospital_encounter_date
+        ,qualifying_encounters.encounter_end_date
+        ,DATE_DIFF(
+            'year'
+            , patients.birthdate
+            ,qualifying_encounters.hospital_encounter_date
+            ) 
+            AS age_at_visit
+        ,patients.birthdate
+        ,patients.deathdate
+
+    FROM qualifying_encounters
+    INNER JOIN patients
+        ON patients.id = qualifying_encounters.patient_id
+    WHERE 1 = 1
+        AND DATE_DIFF('year', patients.birthdate, qualifying_encounters.hospital_encounter_date) BETWEEN 18 AND 35
+)
 
 -- Define current_meds
 --   - medications active at encounter start
