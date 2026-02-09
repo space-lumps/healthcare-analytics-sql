@@ -86,13 +86,37 @@ WITH qualifying_encounters AS (
     )
 )
 
-select count(*) from cohort;
+-- select count(*) from cohort;
+
+
 -- Define opioids_list
 --   - keyword/token list for opioid identification
+,opioids_list AS (
+    SELECT *
+    FROM (VALUES
+        ('hydromorphone')
+        ,('fentanyl')
+        ,('oxycodone-acetaminophen')
+    ) AS opioids(opioid_token)
+)
 
 -- Define current_opioids
 --   - subset of current_meds matching opioid tokens
+,current_opioids AS (
+    SELECT DISTINCT
+        current_meds.patient_id
+        ,current_meds.encounter_id
+        ,current_meds.medication_code AS opioid_code
+        ,current_meds.medication_description
+        ,current_meds.medication_start_date
+        ,current_meds.medication_stop_date
+    FROM current_meds
+    INNER JOIN opioids_list
+        ON LOWER(current_meds.medication_description)
+            LIKE '%' || opioids_list.opioid_token || '%'
+)
 
+select * from current_opioids limit 10;
 -- Define readmissions
 --   - first overdose readmission within 90 days
 
