@@ -3,7 +3,7 @@
 ## Environment
 
 * SQL engine: **DuckDB**
-* Execution context: local CLI or DuckDB interactive shell
+* Execution context: local CLI + DuckDB interactive shell
 * Operating system: macOS (portable to Linux/Windows)
 * No external services required
 
@@ -21,27 +21,30 @@ To run the pipeline, source data must be available locally and loaded into DuckD
 * `patients`
 * `medications`
 
-Column names and expected fields are documented in `/docs/data_dictionary.md`.
+Column names and expected fields are documented in `/docs/data-dictionary-csvs`.
 
 ---
 
 ## Recommended Setup (DuckDB CLI)
+## Install DuckDB (CLI)
 
+### macOS (Homebrew)
+```bash
+brew install duckdb
+duckdb --version
+```
+### Linux
+Use your package manager if available, or download the DuckDB CLI binary from DuckDB releases.
+
+### Windows
+Download the DuckDB CLI executable from DuckDB releases and add it to your PATH (optional).
+
+## Start DuckDB
 From the repository root:
 
 ```bash
 duckdb
 ```
-
-Inside the DuckDB shell, load your raw data (example using CSVs):
-
-```sql
-CREATE TEMP VIEW encounters  AS SELECT * FROM read_csv_auto('data/encounters.csv');
-CREATE TEMP VIEW patients    AS SELECT * FROM read_csv_auto('data/patients.csv');
-CREATE TEMP VIEW medications AS SELECT * FROM read_csv_auto('data/medications.csv');
-```
-
-Paths and formats may vary depending on your local data layout.
 
 ---
 
@@ -49,9 +52,9 @@ Paths and formats may vary depending on your local data layout.
 
 SQL scripts are **numbered and intended to be run in order**.
 
-### 1. Normalize source tables
+### 1. Create TEMP VIEWS from normalized source tables
 
-```sql
+```text
 .read sql/pipeline/10_normalize_sources.sql
 ```
 
@@ -59,7 +62,7 @@ This step standardizes field names and ensures required TEMP VIEWs exist for dow
 
 ### 2. Build the cohort
 
-```sql
+```text
 .read sql/pipeline/20_build_cohort.sql
 ```
 
@@ -85,7 +88,7 @@ These scripts **recalculate key metrics independently** to confirm correctness o
 
 Example:
 
-```sql
+```test
 .read sql/pipeline/tests/21_test_readmissions_validation.sql
 ```
 
