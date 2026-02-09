@@ -212,4 +212,12 @@ WITH qualifying_encounters AS (
     )
 
 SELECT * FROM drug_overdose_cohort
+
+
 ;
+
+
+
+-- select count(*) over() partition by(patient_id) ;
+
+
