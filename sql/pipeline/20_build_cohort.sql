@@ -26,6 +26,9 @@
 
 -- Define qualifying_encounters
 --   - filter encounters to drug overdose + date threshold
+CREATE OR REPLACE TEMP VIEW cohort_output AS
+
+
 WITH qualifying_encounters AS (
     SELECT
         encounters.patient AS patient_id
@@ -143,44 +146,70 @@ WITH qualifying_encounters AS (
 -- Final SELECT
 --   - aggregate to one row per patient_id + encounter_id
 --   - compute indicator and count columns
-SELECT
-    cohort.patient_id
-    ,cohort.encounter_id
-    ,cohort.hospital_encounter_date
-    ,cohort.age_at_visit
+,drug_overdose_cohort AS (
     
-    -- ,... AS death_at_visit_ind
+    SELECT
+        cohort.patient_id
+        ,cohort.encounter_id
+        ,cohort.hospital_encounter_date
+        ,cohort.age_at_visit
+        
+        ,CASE
+            WHEN cohort.deathdate IS NULL THEN 0
+            WHEN cohort.deathdate BETWEEN cohort.hospital_encounter_date AND cohort.encounter_end_date THEN 1
+            ELSE 0
+        END AS death_at_visit_ind
 
-    -- ,... AS count_current_meds
-    
-    -- ,... AS current_opioid_ind
+        ,COUNT(
+                DISTINCT CAST(current_meds.medication_code AS VARCHAR) 
+                || '|' || CAST(current_meds.medication_start_date AS VARCHAR)
 
-    -- ,... AS readmission_90_day_ind
+        ) AS count_current_meds
+        
+        ,CASE
+            WHEN current_opioids.opioid_code IS NOT NULL THEN 1
+            ELSE 0
+        END AS current_opioid_ind
 
-    -- ,... AS readmission_30_day_ind
+        ,CASE
+            WHEN readmissions.first_readmission_date IS NULL THEN 0
+            ELSE 1
+        END AS readmission_90_day_ind
 
-    -- , AS first_readmission_date
+        ,CASE
+            WHEN readmissions.first_readmission_date IS NULL THEN 0
+            WHEN readmissions.first_readmission_date
+                <= CAST(cohort.encounter_end_date + INTERVAL '30 days' AS DATE)
+            THEN 1
+            ELSE 0
+        END AS readmission_30_day_ind
 
-FROM
-    cohort
-LEFT JOIN
-    current_meds ON cohort.encounter_id = current_meds.encounter_id
-LEFT JOIN
-    current_opioids ON cohort.encounter_id = current_opioids.encounter_id
-LEFT JOIN
-    readmissions
-        ON cohort.patient_id = readmissions.patient_id
-        AND cohort.encounter_id = readmissions.first_encounter_id
+        ,CASE
+            WHEN readmissions.first_readmission_date IS NULL THEN NULL
+            ELSE readmissions.first_readmission_date
+        END AS first_readmission_date
 
-GROUP BY 
-    cohort.patient_id
-    ,cohort.encounter_id
-    ,cohort.hospital_encounter_date
-    ,cohort.age_at_visit
-    -- ,cohort.deathdate
-    -- ,cohort.encounter_end_date
-    -- ,current_opioids.opioid_code
-    -- ,readmissions.first_readmission_date
+    FROM
+        cohort
+    LEFT JOIN
+        current_meds ON cohort.encounter_id = current_meds.encounter_id
+    LEFT JOIN
+        current_opioids ON cohort.encounter_id = current_opioids.encounter_id
+    LEFT JOIN
+        readmissions
+            ON cohort.patient_id = readmissions.patient_id
+            AND cohort.encounter_id = readmissions.first_encounter_id
 
-LIMIT 10
+    GROUP BY 
+        cohort.patient_id
+        ,cohort.encounter_id
+        ,cohort.hospital_encounter_date
+        ,cohort.age_at_visit
+        ,cohort.deathdate
+        ,cohort.encounter_end_date
+        ,current_opioids.opioid_code
+        ,readmissions.first_readmission_date
+    )
+
+SELECT * FROM drug_overdose_cohort
 ;
