@@ -115,11 +115,72 @@ WITH qualifying_encounters AS (
         ON LOWER(current_meds.medication_description)
             LIKE '%' || opioids_list.opioid_token || '%'
 )
+-- select * from current_opioids limit 10;
 
-select * from current_opioids limit 10;
+
 -- Define readmissions
 --   - first overdose readmission within 90 days
+,readmissions AS (
+    SELECT
+        first_encounter.patient_id
+        ,first_encounter.encounter_id AS first_encounter_id
+        ,first_encounter.hospital_encounter_date AS first_encounter_date
+        ,MIN(readmit.hospital_encounter_date) AS first_readmission_date
+    FROM cohort first_encounter
+     INNER JOIN cohort readmit
+         ON first_encounter.patient_id = readmit.patient_id
+        AND readmit.hospital_encounter_date > first_encounter.encounter_end_date
+        AND readmit.hospital_encounter_date
+            <= CAST(first_encounter.encounter_end_date + INTERVAL '90 days' AS DATE)
+    GROUP BY
+        first_encounter.patient_id
+        ,first_encounter.encounter_id
+        ,first_encounter.hospital_encounter_date
+)
+-- select count(*), count(distinct first_encounter_id) from readmissions;
+
 
 -- Final SELECT
 --   - aggregate to one row per patient_id + encounter_id
 --   - compute indicator and count columns
+SELECT
+    cohort.patient_id
+    ,cohort.encounter_id
+    ,cohort.hospital_encounter_date
+    ,cohort.age_at_visit
+    
+    -- ,... AS death_at_visit_ind
+
+    -- ,... AS count_current_meds
+    
+    -- ,... AS current_opioid_ind
+
+    -- ,... AS readmission_90_day_ind
+
+    -- ,... AS readmission_30_day_ind
+
+    -- , AS first_readmission_date
+
+FROM
+    cohort
+LEFT JOIN
+    current_meds ON cohort.encounter_id = current_meds.encounter_id
+LEFT JOIN
+    current_opioids ON cohort.encounter_id = current_opioids.encounter_id
+LEFT JOIN
+    readmissions
+        ON cohort.patient_id = readmissions.patient_id
+        AND cohort.encounter_id = readmissions.first_encounter_id
+
+GROUP BY 
+    cohort.patient_id
+    ,cohort.encounter_id
+    ,cohort.hospital_encounter_date
+    ,cohort.age_at_visit
+    -- ,cohort.deathdate
+    -- ,cohort.encounter_end_date
+    -- ,current_opioids.opioid_code
+    -- ,readmissions.first_readmission_date
+
+LIMIT 10
+;
