@@ -18,5 +18,3 @@ GROUP BY
 ORDER BY
 	encounter_count DESC
 ;
-
-;
