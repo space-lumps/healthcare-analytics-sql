@@ -42,7 +42,7 @@ CREATE OR REPLACE TEMP VIEW medications AS
 WITH medications_src AS (
     SELECT *
     FROM read_csv_auto(
-        '../analyst-take-home-task/datasets/medications.csv'
+        '../../datasets/medications.csv'
         ,SAMPLE_SIZE = -1
         ,NULLSTR = 'NA'
         ,types = {
