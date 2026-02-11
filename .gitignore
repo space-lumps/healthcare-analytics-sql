@@ -1,5 +1,5 @@
 .DS_Store
-datasets/*.csv
+datasets/prod/
 *.log
 .env
 docs/data-dictionary.xlsx
