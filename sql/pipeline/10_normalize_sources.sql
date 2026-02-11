@@ -25,6 +25,13 @@ CREATE OR REPLACE TEMP VIEW encounters AS
 SELECT
     "PATIENT" AS patient
     ,"Id" AS id
+    ,"Code" AS code -- used for tests, not intended for final output
+    ,"Description" as description -- used for tests, not intended for final output
+
+    -- for testing only:
+    -- ,TRY_CAST(NULLIF("START", 'NA') AS TIMESTAMP) AS start
+    -- ,TRY_CAST(NULLIF("STOP",  'NA') AS TIMESTAMP) AS stop
+
     ,CAST(TRY_CAST(NULLIF("START", 'NA') AS TIMESTAMP) AS DATE) AS start
     ,CAST(TRY_CAST(NULLIF("STOP",  'NA') AS TIMESTAMP) AS DATE) AS stop
     ,"REASONDESCRIPTION" AS reasondescription
@@ -32,7 +39,6 @@ FROM read_csv(
     '../../datasets/encounters.csv'
     ,ALL_VARCHAR = true
 );
-
 
 -- CREATE OR REPLACE TEMP VIEW medications
 --   - patient, encounter, code, description, start (DATE), stop (DATE | NULL)
