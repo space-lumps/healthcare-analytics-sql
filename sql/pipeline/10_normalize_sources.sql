@@ -1,4 +1,4 @@
--- ============================================================
+-- ==============================================================================
 -- 10_normalize_sources.sql
 -- Purpose:
 --   Normalize raw CSV sources into typed, analysis-ready TEMP VIEWs.
@@ -13,14 +13,20 @@
 --     - patients
 --
 -- Notes:
---   allergies and procedures are intentionally omitted (not used downstream).
 --   Keep this file limited to ingestion + typing + light normalization only.
--- ============================================================
+-- ==============================================================================
 
+-- ==============================================================================
+-- Dataset selector -- toggle between sample and prod data
+-- ==============================================================================
+-- CREATE OR REPLACE MACRO dataset_root() AS '../../datasets/sample';
+CREATE OR REPLACE MACRO dataset_root() AS '../../datasets/prod';
+-- ==============================================================================
 -- CREATE OR REPLACE TEMP VIEW encounters
 --   - patient, id, start (DATE), stop (DATE), reasondescription
 --   - encounters.csv START/STOP are timestamps → parse TIMESTAMP → cast to DATE
 --   - 'NA' → NULL before casting
+-- ==============================================================================
 CREATE OR REPLACE TEMP VIEW encounters AS
 SELECT
     "PATIENT" AS patient
@@ -36,19 +42,20 @@ SELECT
     ,CAST(TRY_CAST(NULLIF("STOP",  'NA') AS TIMESTAMP) AS DATE) AS stop
     ,"REASONDESCRIPTION" AS reasondescription
 FROM read_csv(
-    '../../datasets/encounters.csv'
+    dataset_root() || '/encounters.csv'
     ,ALL_VARCHAR = true
 );
-
+-- ==============================================================================
 -- CREATE OR REPLACE TEMP VIEW medications
 --   - patient, encounter, code, description, start (DATE), stop (DATE | NULL)
 --   - known duplicate rows → SELECT DISTINCT on full row
 --   - 'NA' handled via NULLSTR and/or TRY_CAST for nullable date fields
+-- ==============================================================================
 CREATE OR REPLACE TEMP VIEW medications AS
 WITH medications_src AS (
     SELECT *
     FROM read_csv_auto(
-        '../../datasets/medications.csv'
+        dataset_root() || '/medications.csv'
         ,SAMPLE_SIZE = -1
         ,NULLSTR = 'NA'
         ,types = {
@@ -74,11 +81,11 @@ SELECT
     ,start
     ,stop
 FROM medications_deduped;
-
-
+-- ==============================================================================
 -- CREATE OR REPLACE TEMP VIEW patients
 --   - id, birthdate (DATE), deathdate (DATE | NULL)
---   - deathdate contains 'NA' → NULL → TRY_CAST
+--   - deathdate contains 'NA' → NULL → CAST
+-- ==============================================================================
 CREATE OR REPLACE TEMP VIEW patients AS
 SELECT
     id
@@ -86,7 +93,7 @@ SELECT
     ,CAST(deathdate AS DATE) AS deathdate
     -- other columns as-is
 FROM read_csv_auto(
-    '../../datasets/patients.csv'
+    dataset_root() || '/patients.csv'
     ,SAMPLE_SIZE = -1
     ,NULLSTR = 'NA'
 );
