@@ -14,13 +14,22 @@
 --
 -- Notes:
 --   Keep this file limited to ingestion + typing + light normalization only.
+--
+-- Instructions:
+--   Run duckdb from pipieline/ directory
+--   duckdb commands from inside pipeline/ should be as follows:
+--   .read 10_normalize_sources.sql
+--   .read 20_build_cohort.sql
+--   .read test/<test_name>
 -- ==============================================================================
 
 -- ==============================================================================
 -- Dataset selector -- toggle between sample and prod data
 -- ==============================================================================
--- CREATE OR REPLACE MACRO dataset_root() AS '../../datasets/sample';
-CREATE OR REPLACE MACRO dataset_root() AS '../../datasets/prod';
+CREATE OR REPLACE MACRO dataset_root() AS '../../datasets/sample';
+-- CREATE OR REPLACE MACRO dataset_root() AS '../../datasets/prod';
+
+
 -- ==============================================================================
 -- CREATE OR REPLACE TEMP VIEW encounters
 --   - patient, id, start (DATE), stop (DATE), reasondescription
@@ -40,11 +49,12 @@ SELECT
 
     ,CAST(TRY_CAST(NULLIF("START", 'NA') AS TIMESTAMP) AS DATE) AS start
     ,CAST(TRY_CAST(NULLIF("STOP",  'NA') AS TIMESTAMP) AS DATE) AS stop
-    ,"REASONDESCRIPTION" AS reasondescription
+    ,NULLIF("REASONDESCRIPTION", 'NA') AS reasondescription
 FROM read_csv(
     dataset_root() || '/encounters.csv'
     ,ALL_VARCHAR = true
 );
+
 -- ==============================================================================
 -- CREATE OR REPLACE TEMP VIEW medications
 --   - patient, encounter, code, description, start (DATE), stop (DATE | NULL)
@@ -63,24 +73,17 @@ WITH medications_src AS (
         }
     )
 )
-, medications_deduped AS (
-    SELECT DISTINCT
-        "PATIENT" AS patient
-        ,"ENCOUNTER" AS encounter
-        ,"CODE" AS code
-        ,"DESCRIPTION" AS description
-        ,TRY_CAST("START" AS DATE) AS start
-        ,TRY_CAST("STOP"  AS DATE) AS stop
-    FROM medications_src
-)
-SELECT
-    patient
-    ,encounter
-    ,code
-    ,description
-    ,start
-    ,stop
-FROM medications_deduped;
+
+SELECT DISTINCT
+    "PATIENT" AS patient
+    ,"ENCOUNTER" AS encounter
+    ,"CODE" AS code
+    ,"DESCRIPTION" AS description
+    ,TRY_CAST("START" AS DATE) AS start
+    ,TRY_CAST("STOP"  AS DATE) AS stop
+FROM medications_src
+;
+
 -- ==============================================================================
 -- CREATE OR REPLACE TEMP VIEW patients
 --   - id, birthdate (DATE), deathdate (DATE | NULL)
