@@ -10,7 +10,7 @@ WITH expected AS (
 )
 ,actual AS (
 	SELECT COUNT(*) AS actual_count
-	FROM drug_overdose_cohort
+	FROM overdose_cohort
 )
 SELECT
 	expected.expected_count

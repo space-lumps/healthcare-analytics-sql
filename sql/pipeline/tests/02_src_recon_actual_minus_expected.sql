@@ -23,7 +23,7 @@ WITH expected_encounters AS (
 	SELECT
 		patient_id
 		,encounter_id
-	FROM drug_overdose_cohort
+	FROM overdose_cohort
 )
 
 -- Only main SELECT statement differs from 06_src_recon_test_01

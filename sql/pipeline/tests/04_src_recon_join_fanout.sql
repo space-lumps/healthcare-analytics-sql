@@ -101,7 +101,7 @@ WITH qualifying_encounters AS (
 	SELECT
 		(SELECT COUNT(*) FROM cohort) AS base_encounter_rows
 		,(SELECT COUNT(*) FROM pre_group_joined) AS pre_group_rows
-		,(SELECT COUNT(*) FROM drug_overdose_cohort) AS final_rows
+		,(SELECT COUNT(*) FROM overdose_cohort) AS final_rows
 )
 SELECT
 	counts.*

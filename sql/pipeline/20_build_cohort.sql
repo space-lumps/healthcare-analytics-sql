@@ -26,7 +26,7 @@
 
 -- Define qualifying_encounters
 --   - filter encounters to drug overdose + date threshold
-CREATE OR REPLACE TEMP VIEW drug_overdose_cohort AS
+CREATE OR REPLACE TEMP VIEW overdose_cohort AS
 
 
 WITH qualifying_encounters AS (
@@ -253,4 +253,4 @@ SELECT * FROM cohort_final;
 -- ------------------------------------------------------------------
 -- Interactive inspection (outputs rows)
 -- ------------------------------------------------------------------
--- SELECT * FROM drug_overdose_cohort limit 20;
+-- SELECT * FROM overdose_cohort limit 20;

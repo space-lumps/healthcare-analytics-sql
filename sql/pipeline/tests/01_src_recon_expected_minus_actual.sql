@@ -23,7 +23,7 @@ WITH expected_encounters AS (
 	SELECT
 		patient_id
 		,encounter_id
-	FROM drug_overdose_cohort
+	FROM overdose_cohort
 )
 
 -- Fail if anything expected is missing

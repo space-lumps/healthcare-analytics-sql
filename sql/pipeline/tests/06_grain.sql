@@ -8,22 +8,22 @@
 
 -- 1) Null keys
 SELECT
-	drug_overdose_cohort.*
-FROM drug_overdose_cohort
+	overdose_cohort.*
+FROM overdose_cohort
 WHERE 1 = 1
-	AND drug_overdose_cohort.patient_id IS NULL
-	OR  drug_overdose_cohort.encounter_id IS NULL;
+	AND overdose_cohort.patient_id IS NULL
+	OR  overdose_cohort.encounter_id IS NULL;
 
 -- 2) Duplicate patient_id + encounter_id
 WITH dupes AS (
 	SELECT
-		drug_overdose_cohort.patient_id
-		,drug_overdose_cohort.encounter_id
+		overdose_cohort.patient_id
+		,overdose_cohort.encounter_id
 		,COUNT(*) AS row_count
-	FROM drug_overdose_cohort
+	FROM overdose_cohort
 	GROUP BY
-		drug_overdose_cohort.patient_id
-		,drug_overdose_cohort.encounter_id
+		overdose_cohort.patient_id
+		,overdose_cohort.encounter_id
 	HAVING COUNT(*) > 1
 )
 SELECT

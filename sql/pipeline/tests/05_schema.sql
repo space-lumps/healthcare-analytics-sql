@@ -11,17 +11,17 @@
 -- 1) Column existence smoke test (will error if missing)
 WITH _smoke AS (
 	SELECT
-		drug_overdose_cohort.patient_id
-		,drug_overdose_cohort.encounter_id
-		,drug_overdose_cohort.hospital_encounter_date
-		,drug_overdose_cohort.age_at_visit
-		,drug_overdose_cohort.death_at_visit_ind
-		,drug_overdose_cohort.count_current_meds
-		,drug_overdose_cohort.current_opioid_ind
-		,drug_overdose_cohort.readmission_90_day_ind
-		,drug_overdose_cohort.readmission_30_day_ind
-		,drug_overdose_cohort.first_readmission_date
-	FROM drug_overdose_cohort
+		overdose_cohort.patient_id
+		,overdose_cohort.encounter_id
+		,overdose_cohort.hospital_encounter_date
+		,overdose_cohort.age_at_visit
+		,overdose_cohort.death_at_visit_ind
+		,overdose_cohort.count_current_meds
+		,overdose_cohort.current_opioid_ind
+		,overdose_cohort.readmission_90_day_ind
+		,overdose_cohort.readmission_30_day_ind
+		,overdose_cohort.first_readmission_date
+	FROM overdose_cohort
 	LIMIT 1
 )
 SELECT

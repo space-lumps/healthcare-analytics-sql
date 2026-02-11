@@ -9,17 +9,17 @@
 -- 1) death_at_visit_ind must be 0/1 and consistent with patients.deathdate
 WITH base AS (
 	SELECT
-		drug_overdose_cohort.patient_id
-		,drug_overdose_cohort.encounter_id
-		,drug_overdose_cohort.hospital_encounter_date
+		overdose_cohort.patient_id
+		,overdose_cohort.encounter_id
+		,overdose_cohort.hospital_encounter_date
 		,encounters.stop AS encounter_end_date
 		,patients.deathdate
-		,drug_overdose_cohort.death_at_visit_ind
-	FROM drug_overdose_cohort
+		,overdose_cohort.death_at_visit_ind
+	FROM overdose_cohort
 	INNER JOIN patients
-		ON patients.id = drug_overdose_cohort.patient_id
+		ON patients.id = overdose_cohort.patient_id
 	INNER JOIN encounters
-		ON encounters.id = drug_overdose_cohort.encounter_id
+		ON encounters.id = overdose_cohort.encounter_id
 )
 SELECT
 	base.*
@@ -42,10 +42,10 @@ WHERE 1 = 1
 --    (This checks "no false positives" for opioid flag.)
 WITH cohort_dates AS (
 	SELECT
-		drug_overdose_cohort.patient_id
-		,drug_overdose_cohort.encounter_id
-		,drug_overdose_cohort.hospital_encounter_date
-	FROM drug_overdose_cohort
+		overdose_cohort.patient_id
+		,overdose_cohort.encounter_id
+		,overdose_cohort.hospital_encounter_date
+	FROM overdose_cohort
 )
 ,opioid_hits AS (
 	SELECT DISTINCT
@@ -67,38 +67,38 @@ WITH cohort_dates AS (
 		)
 )
 SELECT
-	drug_overdose_cohort.patient_id
-	,drug_overdose_cohort.encounter_id
-	,drug_overdose_cohort.current_opioid_ind
-FROM drug_overdose_cohort
+	overdose_cohort.patient_id
+	,overdose_cohort.encounter_id
+	,overdose_cohort.current_opioid_ind
+FROM overdose_cohort
 LEFT JOIN opioid_hits
-	ON opioid_hits.patient_id = drug_overdose_cohort.patient_id
-	AND opioid_hits.encounter_id = drug_overdose_cohort.encounter_id
+	ON opioid_hits.patient_id = overdose_cohort.patient_id
+	AND opioid_hits.encounter_id = overdose_cohort.encounter_id
 WHERE 1 = 1
-	AND drug_overdose_cohort.current_opioid_ind = 1
+	AND overdose_cohort.current_opioid_ind = 1
 	AND opioid_hits.encounter_id IS NULL;
 
 -- 3) readmission_30_day_ind cannot be 1 if readmission_90_day_ind is 0
 SELECT
-	drug_overdose_cohort.patient_id
-	,drug_overdose_cohort.encounter_id
-	,drug_overdose_cohort.readmission_90_day_ind
-	,drug_overdose_cohort.readmission_30_day_ind
-FROM drug_overdose_cohort
+	overdose_cohort.patient_id
+	,overdose_cohort.encounter_id
+	,overdose_cohort.readmission_90_day_ind
+	,overdose_cohort.readmission_30_day_ind
+FROM overdose_cohort
 WHERE 1 = 1
-	AND drug_overdose_cohort.readmission_30_day_ind = 1
-	AND drug_overdose_cohort.readmission_90_day_ind = 0;
+	AND overdose_cohort.readmission_30_day_ind = 1
+	AND overdose_cohort.readmission_90_day_ind = 0;
 
 -- 4) first_readmission_date must be null iff readmission_90_day_ind = 0
 SELECT
-	drug_overdose_cohort.patient_id
-	,drug_overdose_cohort.encounter_id
-	,drug_overdose_cohort.readmission_90_day_ind
-	,drug_overdose_cohort.first_readmission_date
-FROM drug_overdose_cohort
+	overdose_cohort.patient_id
+	,overdose_cohort.encounter_id
+	,overdose_cohort.readmission_90_day_ind
+	,overdose_cohort.first_readmission_date
+FROM overdose_cohort
 WHERE 1 = 1
 	AND (
-		(drug_overdose_cohort.readmission_90_day_ind = 0 AND drug_overdose_cohort.first_readmission_date IS NOT NULL)
+		(overdose_cohort.readmission_90_day_ind = 0 AND overdose_cohort.first_readmission_date IS NOT NULL)
 		OR
-		(drug_overdose_cohort.readmission_90_day_ind = 1 AND drug_overdose_cohort.first_readmission_date IS NULL)
+		(overdose_cohort.readmission_90_day_ind = 1 AND overdose_cohort.first_readmission_date IS NULL)
 	);

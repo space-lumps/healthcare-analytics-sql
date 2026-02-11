@@ -8,29 +8,29 @@
 
 -- 1) Encounter is actually a Drug overdose encounter in encounters source
 SELECT
-	drug_overdose_cohort.patient_id
-	,drug_overdose_cohort.encounter_id
+	overdose_cohort.patient_id
+	,overdose_cohort.encounter_id
 	,encounters.reasondescription
-FROM drug_overdose_cohort
+FROM overdose_cohort
 INNER JOIN encounters
-	ON encounters.id = drug_overdose_cohort.encounter_id
+	ON encounters.id = overdose_cohort.encounter_id
 WHERE 1 = 1
 	AND encounters.reasondescription <> 'Drug overdose';
 
 -- 2) Date threshold
 SELECT
-	drug_overdose_cohort.patient_id
-	,drug_overdose_cohort.encounter_id
-	,drug_overdose_cohort.hospital_encounter_date
-FROM drug_overdose_cohort
+	overdose_cohort.patient_id
+	,overdose_cohort.encounter_id
+	,overdose_cohort.hospital_encounter_date
+FROM overdose_cohort
 WHERE 1 = 1
-	AND drug_overdose_cohort.hospital_encounter_date <= DATE '1999-07-15';
+	AND overdose_cohort.hospital_encounter_date <= DATE '1999-07-15';
 
 -- 3) Age range (18–35 inclusive)
 SELECT
-	drug_overdose_cohort.patient_id
-	,drug_overdose_cohort.encounter_id
-	,drug_overdose_cohort.age_at_visit
-FROM drug_overdose_cohort
+	overdose_cohort.patient_id
+	,overdose_cohort.encounter_id
+	,overdose_cohort.age_at_visit
+FROM overdose_cohort
 WHERE 1 = 1
-	AND drug_overdose_cohort.age_at_visit NOT BETWEEN 18 AND 35;
+	AND overdose_cohort.age_at_visit NOT BETWEEN 18 AND 35;
