@@ -39,6 +39,7 @@ WITH qualifying_encounters AS (
     WHERE 1 = 1
         AND encounters.reasondescription = 'Drug overdose'
         AND encounters.start > DATE '1999-07-15'
+    --    AND encounters.stop is null
 )
 
 -- Define cohort
@@ -51,12 +52,31 @@ WITH qualifying_encounters AS (
         ,qualifying_encounters.encounter_id
         ,qualifying_encounters.hospital_encounter_date
         ,qualifying_encounters.encounter_end_date
-        ,DATE_DIFF(
-            'year'
-            , patients.birthdate
-            ,qualifying_encounters.hospital_encounter_date
-            ) 
-            AS age_at_visit
+        
+        -- this previous calculation is incorrect as it only give full-year date differences and will result in inaccurate ages        
+        -- ,DATE_DIFF(
+        --     'year'
+        --     , patients.birthdate
+        --     ,qualifying_encounters.hospital_encounter_date
+        --     ) 
+        --     AS age_at_visit
+
+        (
+            EXTRACT(YEAR FROM qualifying_encounters.hospital_encounter_date)
+            - EXTRACT(YEAR FROM patients.birthdate)
+            - CASE
+                WHEN
+                    EXTRACT(MONTH FROM qualifying_encounters.hospital_encounter_date) < EXTRACT(MONTH FROM patients.birthdate)
+                    OR (
+                        EXTRACT(MONTH FROM qualifying_encounters.hospital_encounter_date) = EXTRACT(MONTH FROM patients.birthdate)
+                        AND EXTRACT(DAY FROM qualifying_encounters.hospital_encounter_date) < EXTRACT(DAY FROM patients.birthdate)
+                    )
+                THEN 1
+                ELSE 0
+            END
+        ) AS age_at_visit
+
+
         ,patients.birthdate
         ,patients.deathdate
 
@@ -64,7 +84,23 @@ WITH qualifying_encounters AS (
     INNER JOIN patients
         ON patients.id = qualifying_encounters.patient_id
     WHERE 1 = 1
-        AND DATE_DIFF('year', patients.birthdate, qualifying_encounters.hospital_encounter_date) BETWEEN 18 AND 35
+        -- old age filer, do not use:
+        -- AND DATE_DIFF('year', patients.birthdate, qualifying_encounters.hospital_encounter_date) BETWEEN 18 AND 35
+        AND (
+            EXTRACT(YEAR FROM qualifying_encounters.hospital_encounter_date)
+            - EXTRACT(YEAR FROM patients.birthdate)
+            - CASE
+                WHEN
+                    EXTRACT(MONTH FROM qualifying_encounters.hospital_encounter_date) < EXTRACT(MONTH FROM patients.birthdate)
+                    OR (
+                        EXTRACT(MONTH FROM qualifying_encounters.hospital_encounter_date) = EXTRACT(MONTH FROM patients.birthdate)
+                        AND EXTRACT(DAY FROM qualifying_encounters.hospital_encounter_date) < EXTRACT(DAY FROM patients.birthdate)
+                    )
+                THEN 1
+                ELSE 0
+                END
+        ) BETWEEN 18 AND 35
+
 )
 
 -- Define current_meds
@@ -148,6 +184,7 @@ WITH qualifying_encounters AS (
         cohort.patient_id
         ,cohort.encounter_id
         ,cohort.hospital_encounter_date
+        ,cohort.encounter_end_date
         ,cohort.age_at_visit
         
         ,CASE
@@ -200,6 +237,7 @@ WITH qualifying_encounters AS (
         cohort.patient_id
         ,cohort.encounter_id
         ,cohort.hospital_encounter_date
+        ,cohort.encounter_end_date
         ,cohort.age_at_visit
         ,cohort.deathdate
         ,cohort.encounter_end_date
