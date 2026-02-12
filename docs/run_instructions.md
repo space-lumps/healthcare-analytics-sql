@@ -68,7 +68,7 @@ This step standardizes field names and ensures required TEMP VIEWs exist for dow
 
 This script creates a TEMP VIEW:
 
-* `cohort_output`
+* `overdose_cohort`
 
 The view represents one row per `patient_id + encounter_id` and includes all derived metrics.
 
@@ -85,13 +85,6 @@ sql/pipeline/tests/
 ```
 
 These scripts **recalculate key metrics independently** to confirm correctness of the pipeline logic.
-
-Example:
-
-```test
-.read sql/pipeline/tests/21_test_readmissions_validation.sql
-```
-
 Tests are read-only and do not modify pipeline outputs.
 
 ---
