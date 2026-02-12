@@ -30,16 +30,15 @@ CREATE OR REPLACE TEMP VIEW overdose_cohort AS
 
 WITH qualifying_encounters AS (
     SELECT
-        encounters.patient AS patient_id
-        ,encounters.id AS encounter_id
-        ,encounters.start_timestamp AS hospital_encounter_timestamp
-        ,encounters.stop_timestamp AS encounter_end_timestamp
-        ,encounters.description
+        encounters.patient_id
+        ,encounters.encounter_id
+        ,encounters.encounter_start_timestamp AS hospital_encounter_timestamp
+        ,encounters.encounter_stop_timestamp AS encounter_end_timestamp
+        ,encounters.encounter_description
     FROM encounters
     WHERE 1 = 1
-        AND encounters.reasondescription = 'Drug overdose'
-        AND encounters.start_timestamp > TIMESTAMP '1999-07-15'
-    --    AND encounters.stop_timestamp is null
+        AND encounters.encounter_reason = 'Drug overdose'
+        AND encounters.encounter_start_timestamp >= TIMESTAMP '1999-07-16 00:00:00' -- AFTER 7/15
 )
 
 -- Define cohort
@@ -81,11 +80,11 @@ WITH qualifying_encounters AS (
 
         ,patients.birthdate
         ,patients.deathdate
-        ,qualifying_encounters.description
+        ,qualifying_encounters.encounter_description
 
     FROM qualifying_encounters
     INNER JOIN patients
-        ON patients.id = qualifying_encounters.patient_id
+        ON patients.patient_id = qualifying_encounters.patient_id
     WHERE 1 = 1
         -- old age filer, do not use:
         -- AND DATE_DIFF('year', patients.birthdate, qualifying_encounters.hospital_encounter_timestamp) BETWEEN 18 AND 35
@@ -113,33 +112,33 @@ WITH qualifying_encounters AS (
         cohort.patient_id
         ,cohort.encounter_id
         ,cohort.hospital_encounter_timestamp
-        ,medications.code AS medication_code
-        ,medications.description AS medication_description
-        ,medications.start AS medication_start_date
-        ,medications.stop AS medication_stop_date
+        ,medications.medication_code
+        ,medications.medication_description
+        ,medications.medication_start_date
+        ,medications.medication_stop_date
     FROM medications
     INNER JOIN cohort
-        ON medications.patient = cohort.patient_id
+        ON medications.patient_id = cohort.patient_id
     WHERE 1 = 1
-        AND medications.start < cohort.hospital_encounter_timestamp
+        AND medications.medication_start_date < cohort.hospital_encounter_timestamp
         AND (
-            medications.stop IS NULL
-        OR  medications.stop >= cohort.hospital_encounter_timestamp
+            medications.medication_stop_date IS NULL
+        OR  medications.medication_stop_date >= cohort.hospital_encounter_timestamp
     )
 )
 -- meds count per encounter
 ,current_meds_agg AS (
-	SELECT
-		current_meds.patient_id
-		,current_meds.encounter_id
-		,COUNT(
-			DISTINCT CAST(current_meds.medication_code AS VARCHAR)
-			|| '|' || CAST(current_meds.medication_start_date AS VARCHAR)
-		) AS count_current_meds
-	FROM current_meds
-	GROUP BY
-		current_meds.patient_id
-		,current_meds.encounter_id
+    SELECT
+        current_meds.patient_id
+        ,current_meds.encounter_id
+        ,COUNT(
+            DISTINCT CAST(current_meds.medication_code AS VARCHAR)
+            || '|' || CAST(current_meds.medication_start_date AS VARCHAR)
+        ) AS count_current_meds
+    FROM current_meds
+    GROUP BY
+        current_meds.patient_id
+        ,current_meds.encounter_id
 )
 -- Define opioids_list
 --   - keyword/token list for opioid identification
@@ -187,7 +186,7 @@ WITH qualifying_encounters AS (
         ,first_encounter.hospital_encounter_timestamp AS first_encounter_timestamp
         ,MIN(readmit.hospital_encounter_timestamp) AS first_readmission_timestamp
     FROM cohort first_encounter
-     INNER JOIN cohort readmit
+     INNER JOIN cohort readmit -- readmissions must come from the full dataset in case age at readmission >35
          ON first_encounter.patient_id = readmit.patient_id
         AND readmit.hospital_encounter_timestamp > first_encounter.encounter_end_timestamp
         AND readmit.hospital_encounter_timestamp
@@ -197,8 +196,7 @@ WITH qualifying_encounters AS (
         ,first_encounter.encounter_id
         ,first_encounter.hospital_encounter_timestamp
 )
--- select count(*), count(distinct first_encounter_id) from readmissions;
--- select * from readmissions;
+select count(*), count(distinct first_encounter_id) from readmissions;
 
 
 -- Final normalization (as CTE)
@@ -247,15 +245,15 @@ WITH qualifying_encounters AS (
     FROM
         cohort
     -- edit to joins to properly deduplicate rather than exploding rows by directly joining current_meds and current_opioids
-	LEFT JOIN current_meds_agg
-		ON current_meds_agg.patient_id = cohort.patient_id
-		AND current_meds_agg.encounter_id = cohort.encounter_id
-	LEFT JOIN current_opioids_agg
-		ON current_opioids_agg.patient_id = cohort.patient_id
-		AND current_opioids_agg.encounter_id = cohort.encounter_id
-	LEFT JOIN readmissions
-		ON readmissions.patient_id = cohort.patient_id
-		AND readmissions.first_encounter_id = cohort.encounter_id
+    LEFT JOIN current_meds_agg
+        ON current_meds_agg.patient_id = cohort.patient_id
+        AND current_meds_agg.encounter_id = cohort.encounter_id
+    LEFT JOIN current_opioids_agg
+        ON current_opioids_agg.patient_id = cohort.patient_id
+        AND current_opioids_agg.encounter_id = cohort.encounter_id
+    LEFT JOIN readmissions
+        ON readmissions.patient_id = cohort.patient_id
+        AND readmissions.first_encounter_id = cohort.encounter_id
 
     -- GROUP BY 
     --     cohort.patient_id

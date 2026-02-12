@@ -26,8 +26,8 @@
 -- ==============================================================================
 -- Dataset selector -- toggle between sample and prod data
 -- ==============================================================================
-CREATE OR REPLACE MACRO dataset_root() AS '../../datasets/sample';
--- CREATE OR REPLACE MACRO dataset_root() AS '../../datasets/prod';
+--CREATE OR REPLACE MACRO dataset_root() AS '../../datasets/sample';
+ CREATE OR REPLACE MACRO dataset_root() AS '../../datasets/prod';
 
 -- ==============================================================================
 -- CREATE OR REPLACE TEMP VIEW encounters
@@ -45,18 +45,18 @@ WITH encounters_src AS (
     )
 )
 SELECT DISTINCT
-    "PATIENT" AS patient
-    ,"Id" AS id
-    ,"Code" AS code -- used for tests, not intended for final output
-    ,"Description" as description -- used for tests, not intended for final output
+    "PATIENT" AS patient_id
+    ,"Id" AS encounter_id
+    ,"CODE" AS encounter_code -- used for tests, not intended for final output
+    ,"DESCRIPTION" as encounter_description -- used for tests, not intended for final output
 
     -- for testing only:
     -- ,TRY_CAST(NULLIF("START", 'NA') AS TIMESTAMP) AS start
     -- ,TRY_CAST(NULLIF("STOP",  'NA') AS TIMESTAMP) AS stop
 
-    ,CAST("START" AS TIMESTAMP) AS start_timestamp
-    ,CAST("STOP" AS TIMESTAMP) AS stop_timestamp
-    ,"REASONDESCRIPTION" AS reasondescription
+    ,CAST("START" AS TIMESTAMP) AS encounter_start_timestamp
+    ,CAST("STOP" AS TIMESTAMP) AS encounter_stop_timestamp
+    ,"REASONDESCRIPTION" AS encounter_reason
 FROM encounters_src
 ;
 
@@ -80,12 +80,12 @@ WITH medications_src AS (
 )
 
 SELECT DISTINCT
-    "PATIENT" AS patient
-    ,"ENCOUNTER" AS encounter
-    ,"CODE" AS code
-    ,"DESCRIPTION" AS description
-    ,TRY_CAST("START" AS DATE) AS start
-    ,TRY_CAST("STOP"  AS DATE) AS stop
+    "PATIENT" AS patient_id
+    ,"ENCOUNTER" AS encounter_id
+    ,"CODE" AS medication_code
+    ,"DESCRIPTION" AS medication_description
+    ,CAST("START" AS DATE) AS medication_start_date -- these fields are provided in date format
+    ,CAST("STOP"  AS DATE) AS medication_stop_date -- we only cast them as date in case read_csv_auto chose the wrong type
 FROM medications_src
 ;
 
@@ -96,9 +96,9 @@ FROM medications_src
 -- ==============================================================================
 CREATE OR REPLACE TEMP VIEW patients AS
 SELECT
-    id
-    ,CAST(birthdate AS DATE) AS birthdate
-    ,CAST(deathdate AS DATE) AS deathdate
+    "Id" as patient_id
+    ,CAST("BIRTHDATE" AS DATE) AS birthdate
+    ,CAST("DEATHDATE" AS DATE) AS deathdate
 FROM read_csv_auto(
     dataset_root() || '/patients.csv'
     ,SAMPLE_SIZE = -1
