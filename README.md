@@ -12,8 +12,8 @@ The end result is an **analysis-ready cohort table** at a clear grain (`patient_
 
 * Define a drug overdose hospital encounter cohort using explicit clinical and demographic criteria
 * Engineer encounter-level features commonly used in healthcare analytics
-* Validate complex logic (e.g., readmissions) with standalone test queries
-* Demonstrate production-style SQL organization and quality checks
+* Validate complex logic (e.g., readmissions, age calculation) with standalone test queries
+* Demonstrate production-style SQL organization, normalization, and quality checks
 
 ---
 
@@ -23,9 +23,9 @@ The cohort includes hospital encounters that meet all of the following:
 
 * `encounters.reasondescription = 'Drug overdose'`
 * Encounter start date after **1999-07-15**
-* Patient age at encounter between **18 and 35** (inclusive)
+* Patient age at encounter between **18 and 35** (inclusive, birthday-accurate calculation)
 
-The cohort is built as a **TEMP VIEW** to support iterative analysis and testing.
+The cohort is built as a **TEMP VIEW** to support iterative analysis and validation.
 
 ---
 
@@ -33,20 +33,25 @@ The cohort is built as a **TEMP VIEW** to support iterative analysis and testing
 
 Each row represents **one patient encounter** and includes:
 
-* `death_at_visit_ind`
+* `death_at_visit_ind`  
   Indicator for death occurring during the encounter window
-* `count_current_meds`
+
+* `count_current_meds`  
   Count of medications active at encounter start
-* `current_opioid_ind`
+
+* `current_opioid_ind`  
   Indicator for active opioid medications at encounter start
-* `readmission_90_day_ind`
+
+* `readmission_90_day_ind`  
   Indicator for overdose readmission within 90 days
-* `readmission_30_day_ind`
+
+* `readmission_30_day_ind`  
   Indicator for overdose readmission within 30 days
-* `first_readmission_date`
+
+* `first_readmission_date`  
   Date of first qualifying readmission, if any
 
-All metrics are derived explicitly in SQL with documented assumptions.
+All metrics are derived explicitly in SQL with documented assumptions and tested constraints.
 
 ---
 
@@ -54,10 +59,19 @@ All metrics are derived explicitly in SQL with documented assumptions.
 
 The repo includes **dedicated validation queries** to verify correctness of key logic, including:
 
-* Recalculation of readmission indicators independent of the main pipeline
-* Checks for duplicate grain violations (`patient_id + encounter_id`)
-* Distribution checks (e.g., encounters per patient)
-* Sanity checks on row counts and null behavior
+* Independent recalculation of readmission indicators  
+* Comparison of age calculation methods (year-diff vs birthday-accurate)  
+* Validation that readmission counts are unaffected by cohort-side age filtering  
+* Duplicate grain checks (`patient_id + encounter_id`)  
+* Source reconciliation and join fanout checks  
+* Null and range validation tests  
+
+Key validated findings include:
+
+* `encounters.id` is unique (no encounter-level deduplication required)
+* `encounters.stop` contains no null values (validated during QA)
+* Expanding readmission logic beyond the age-filtered cohort produced identical results in this dataset
+* Medication deduplication was required and handled during normalization
 
 Validation logic lives alongside the pipeline and can be run independently.
 
@@ -65,22 +79,31 @@ Validation logic lives alongside the pipeline and can be run independently.
 
 ### Repository Structure
 
-```
+```text
 sql/
+├─ explore/
+│  ├─ 01_source_files_exploration.sql
+│  └─ 02_source_files_exploration_NA.sql
 ├─ pipeline/
 │  ├─ 10_normalize_sources.sql
 │  ├─ 20_build_cohort.sql
 │  └─ tests/
-│     ├─ 21_test_readmissions_validation.sql
-│     └─ additional QA tests
-├─ explore/
-│  └─ ad-hoc analysis and sanity checks
+│     ├─ 01_src_recon_expected_minus_actual.sql
+│     ├─ 02_src_recon_actual_minus_expected.sql
+│     ├─ 03_src_recon_counts.sql
+│     ├─ 04_src_recon_join_fanout.sql
+│     ├─ 05_schema.sql
+│     ├─ 06_grain.sql
+│     ├─ 07_cohort_criteria.sql
+│     ├─ 08_metic_logic.sql
+│     └─ 09_nulls_and_ranges
 /docs
 │  ├─ assumptions.md
-│  ├─ data_dictionary.md
-│  └─ validation_notes.md
+│  ├─ validation_notes.md
+│  └─ data-dictionary-csvs/
 /output
 │  └─ local exports (gitignored)
+└── README.md
 ```
 
 ---
@@ -89,21 +112,38 @@ sql/
 
 * SQL engine: **DuckDB**
 * Scripts are numbered and intended to be run in order
-* Source normalization must be executed before cohort construction
+* `10_normalize_sources.sql` must be executed before `20_build_cohort.sql`
 * Tests can be run after the cohort TEMP VIEW is created
 
 Exact commands and environment setup are documented in `/docs`.
 
 ---
-
 ### Data
 
-* Source data consists of healthcare encounter, patient, and medication tables
-* Raw data files are **not committed** to the repository
-* Schema assumptions and field definitions are documented separately
+Raw source files are not committed to this repository. The project separates local production inputs from reproducible sample data:
+
+- `datasets/prod/`  
+  Local, production-scale source files (gitignored).
+
+- `datasets/sample/`  
+  Synthetic sample CSVs included to make the pipeline runnable and to exercise key edge cases.
+
+Notes:
+- Raw encounter timestamps are stored as UTC in the source data and are converted to `DATE` during normalization for consistent downstream comparisons.
+- The pipeline operates on normalized DuckDB TEMP VIEWs generated by `10_normalize_sources.sql`.
+- Tested constraints, assumptions, and validation findings are documented in `/docs`.
+- Switch between `datasets/sample/` and `datasets/prod/` by updating the `config` TEMP VIEW at the top of `10_normalize_sources.sql`.
 
 ---
 
 ### Notes
 
-This project is intentionally SQL-first and mirrors patterns used in analytics engineering and healthcare data work: clear grain definition, explicit business logic, and testable transformations.
+This project follows analytics engineering principles:
+
+* Explicit grain definition  
+* Deterministic business logic  
+* Separation of normalization and feature engineering  
+* Independent QA validation  
+* Documented assumptions and tested constraints  
+
+The workflow mirrors patterns used in healthcare analytics and production SQL pipelines.
