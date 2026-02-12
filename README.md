@@ -80,30 +80,40 @@ Validation logic lives alongside the pipeline and can be run independently.
 ### Repository Structure
 
 ```text
-sql/
-├─ explore/
-│  ├─ 01_source_files_exploration.sql
-│  └─ 02_source_files_exploration_NA.sql
-├─ pipeline/
-│  ├─ 10_normalize_sources.sql
-│  ├─ 20_build_cohort.sql
-│  └─ tests/
-│     ├─ 01_src_recon_expected_minus_actual.sql
-│     ├─ 02_src_recon_actual_minus_expected.sql
-│     ├─ 03_src_recon_counts.sql
-│     ├─ 04_src_recon_join_fanout.sql
-│     ├─ 05_schema.sql
-│     ├─ 06_grain.sql
-│     ├─ 07_cohort_criteria.sql
-│     ├─ 08_metic_logic.sql
-│     └─ 09_nulls_and_ranges
-/docs
+.
+├─ sql/
+│  ├─ explore/
+│  │  ├─ 01_source_files_exploration.sql
+│  │  └─ 02_source_files_exploration_NA.sql
+│  └─ pipeline/
+│     ├─ 10_normalize_sources.sql
+│     ├─ 20_build_cohort.sql
+│     └─ tests/
+│        ├─ 01_src_recon_expected_minus_actual.sql
+│        ├─ 02_src_recon_actual_minus_expected.sql
+│        ├─ 03_src_recon_counts.sql
+│        ├─ 04_src_recon_join_fanout.sql
+│        ├─ 05_schema.sql
+│        ├─ 06_grain.sql
+│        ├─ 07_cohort_criteria.sql
+│        ├─ 08_metric_logic.sql
+│        └─ 09_nulls_and_ranges.sql
+│
+├─ datasets/
+│  ├─ prod/       (gitignored)
+│  └─ sample/
+│     ├─ encounters.csv
+│     ├─ medications.csv
+│     └─ patients.csv
+│
+├─ docs/
 │  ├─ assumptions.md
-│  ├─ validation_notes.md
+│  ├─ run_instructions.md
 │  └─ data-dictionary-csvs/
-/output
-│  └─ local exports (gitignored)
-└── README.md
+│
+├─ output/        (gitignored)
+│
+└─ README.md
 ```
 
 ---
@@ -111,11 +121,13 @@ sql/
 ### How to Run
 
 * SQL engine: **DuckDB**
-* Scripts are numbered and intended to be run in order
+* DuckDB must be started from `sql/pipeline/` for relative paths to resolve correctly
+* Scripts are numbered and must be run in order
 * `10_normalize_sources.sql` must be executed before `20_build_cohort.sql`
-* Tests can be run after the cohort TEMP VIEW is created
+* Validation tests can be run after the cohort TEMP VIEW is created
 
-Exact commands and environment setup are documented in `/docs`.
+Detailed environment setup and execution instructions are documented in `/docs/run_instructions.md`.
+
 
 ---
 ### Data
