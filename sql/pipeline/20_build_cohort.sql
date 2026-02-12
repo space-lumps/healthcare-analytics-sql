@@ -196,7 +196,7 @@ WITH qualifying_encounters AS (
         ,first_encounter.encounter_id
         ,first_encounter.hospital_encounter_timestamp
 )
-select count(*), count(distinct first_encounter_id) from readmissions;
+-- select count(*), count(distinct first_encounter_id) from readmissions;
 
 
 -- Final normalization (as CTE)
