@@ -1,7 +1,21 @@
+# --- OS / editor ---
 .DS_Store
-datasets/prod/
-*.log
+
+# --- Secrets ---
 .env
-docs/data-dictionary.xlsx
-*.duckdb
+
+# --- Data ---
+datasets/prod/
 output/
+
+# --- Local DB artifacts ---
+*.duckdb
+
+# --- Logs ---
+*.log
+
+# --- Docs / local working files ---
+docs/data-dictionary.xlsx
+
+# --- Local-only test outputs / scratch ---
+sql/pipeline/tests/sample_data_validation/
