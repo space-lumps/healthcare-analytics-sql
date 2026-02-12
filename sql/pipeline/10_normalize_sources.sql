@@ -29,7 +29,6 @@
 CREATE OR REPLACE MACRO dataset_root() AS '../../datasets/sample';
 -- CREATE OR REPLACE MACRO dataset_root() AS '../../datasets/prod';
 
-
 -- ==============================================================================
 -- CREATE OR REPLACE TEMP VIEW encounters
 --   - patient, id, start (DATE), stop (DATE), reasondescription
@@ -37,7 +36,15 @@ CREATE OR REPLACE MACRO dataset_root() AS '../../datasets/sample';
 --   - 'NA' → NULL before casting
 -- ==============================================================================
 CREATE OR REPLACE TEMP VIEW encounters AS
-SELECT
+WITH encounters_src AS (
+    SELECT *
+    FROM read_csv_auto(
+        dataset_root() || '/encounters.csv'
+        ,SAMPLE_SIZE = -1
+        ,NULLSTR = 'NA'
+    )
+)
+SELECT DISTINCT
     "PATIENT" AS patient
     ,"Id" AS id
     ,"Code" AS code -- used for tests, not intended for final output
@@ -47,13 +54,11 @@ SELECT
     -- ,TRY_CAST(NULLIF("START", 'NA') AS TIMESTAMP) AS start
     -- ,TRY_CAST(NULLIF("STOP",  'NA') AS TIMESTAMP) AS stop
 
-    ,CAST(TRY_CAST(NULLIF("START", 'NA') AS TIMESTAMP) AS DATE) AS start
-    ,CAST(TRY_CAST(NULLIF("STOP",  'NA') AS TIMESTAMP) AS DATE) AS stop
-    ,NULLIF("REASONDESCRIPTION", 'NA') AS reasondescription
-FROM read_csv(
-    dataset_root() || '/encounters.csv'
-    ,ALL_VARCHAR = true
-);
+    ,CAST("START" AS TIMESTAMP) AS start_timestamp
+    ,CAST("STOP" AS TIMESTAMP) AS stop_timestamp
+    ,"REASONDESCRIPTION" AS reasondescription
+FROM encounters_src
+;
 
 -- ==============================================================================
 -- CREATE OR REPLACE TEMP VIEW medications
@@ -94,7 +99,6 @@ SELECT
     id
     ,CAST(birthdate AS DATE) AS birthdate
     ,CAST(deathdate AS DATE) AS deathdate
-    -- other columns as-is
 FROM read_csv_auto(
     dataset_root() || '/patients.csv'
     ,SAMPLE_SIZE = -1
