@@ -1,4 +1,4 @@
-# Healthcare Analytics SQL
+# Healthcare Analytics: Clinical Cohort Construction in SQL
 
 ### Overview
 
@@ -70,10 +70,12 @@ Key validated findings include:
 
 * `encounters.id` is unique (no encounter-level deduplication required)
 * `encounters.stop` contains no null values (validated during QA)
-* Expanding readmission logic beyond the age-filtered cohort produced identical results in this dataset
+* Expanding readmission logic beyond the age-filtered cohort produced identical results in the prod and sample dataset
 * Medication deduplication was required and handled during normalization
 
 Validation logic lives alongside the pipeline and can be run independently.
+Validation summary is documented in `docs/validation_summary`
+* tests with prefix including "src_recon" are designed to recalculate cohort-selection calculations before further schema tests.
 
 ---
 
@@ -109,6 +111,7 @@ Validation logic lives alongside the pipeline and can be run independently.
 ├─ docs/
 │  ├─ assumptions.md
 │  ├─ run_instructions.md
+│  ├─ validation_summary.md
 │  └─ data-dictionary-csvs/
 │
 ├─ output/        (gitignored)
@@ -123,10 +126,10 @@ Validation logic lives alongside the pipeline and can be run independently.
 * SQL engine: **DuckDB**
 * DuckDB must be started from `sql/pipeline/` for relative paths to resolve correctly
 * Scripts are numbered and must be run in order
-* `10_normalize_sources.sql` must be executed before `20_build_cohort.sql`
+* `10_normalize_sources.sql` must be executed before `20_build_cohort.sql`, followed by `30_output_csv.sql`
 * Validation tests can be run after the cohort TEMP VIEW is created
 
-Detailed environment setup and execution instructions are documented in `/docs/run_instructions.md`.
+Detailed environment setup and execution instructions are documented in `docs/run_instructions.md`.
 
 
 ---
