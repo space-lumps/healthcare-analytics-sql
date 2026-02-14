@@ -2,105 +2,99 @@
 -- 10_normalize_sources.sql
 -- Purpose:
 --   Normalize raw CSV sources into typed, analysis-ready TEMP VIEWs.
---   - Convert 'NA' placeholders to NULL (where applicable)
---   - Cast date/timestamp fields to DATE
---   - Deduplicate known-duplicated sources (medications)
+--   - Treat literal 'NA' as NULL via NULLSTR to prevent casting failures
+--   - Standardize column names across sources (patient_id, encounter_id, etc.)
+--   - Preserve encounter start/stop as TIMESTAMP for time-based comparisons
+--   - Deduplicate exact duplicate rows where present (SELECT DISTINCT)
 --
--- Output:
---   TEMP VIEWs used by downstream pipeline steps:
---     - encounters
---     - medications
---     - patients
+-- Output TEMP VIEWs:
+--   - encounters
+--   - medications
+--   - patients
 --
 -- Notes:
---   Keep this file limited to ingestion + typing + light normalization only.
+--   - This script is limited to ingestion + light normalization only.
+--   - SAMPLE_SIZE = -1 forces DuckDB to infer types using the full file.
 --
--- Instructions:
---   Run duckdb from pipieline/ directory
---   duckdb commands from inside pipeline/ should be as follows:
---   .read 10_normalize_sources.sql
---   .read 20_build_cohort.sql
---   .read test/<test_name>
+-- Run context:
+--   Start DuckDB from sql/pipeline/ so relative paths resolve:
+--     duckdb
+--     .read 10_normalize_sources.sql
+--     .read 20_build_cohort.sql
+--     .read tests/<test_name>.sql
+--     .read 30_output_csv.sql
 -- ==============================================================================
 
 -- ==============================================================================
--- Dataset selector -- toggle between sample and prod data
+-- Dataset selector (toggle between sample and production data)
 -- ==============================================================================
---CREATE OR REPLACE MACRO dataset_root() AS '../../datasets/sample';
- CREATE OR REPLACE MACRO dataset_root() AS '../../datasets/prod';
+CREATE OR REPLACE MACRO dataset_root() AS '../../datasets/sample';
+-- CREATE OR REPLACE MACRO dataset_root() AS '../../datasets/prod';
 
 -- ==============================================================================
--- CREATE OR REPLACE TEMP VIEW encounters
---   - patient, id, start (DATE), stop (DATE), reasondescription
---   - encounters.csv START/STOP are timestamps → parse TIMESTAMP → cast to DATE
---   - 'NA' → NULL before casting
+-- encounters
+--   - Preserve START/STOP as TIMESTAMP
+--   - Convert 'NA' to NULL (NULLSTR) before casting
+--   - SELECT DISTINCT removes exact duplicate rows only
 -- ==============================================================================
 CREATE OR REPLACE TEMP VIEW encounters AS
 WITH encounters_src AS (
-    SELECT *
-    FROM read_csv_auto(
-        dataset_root() || '/encounters.csv'
-        ,SAMPLE_SIZE = -1
-        ,NULLSTR = 'NA'
-    )
+	SELECT *
+	FROM read_csv_auto(
+		dataset_root() || '/encounters.csv'
+		,SAMPLE_SIZE = -1
+		,NULLSTR = 'NA'
+	)
 )
 SELECT DISTINCT
-    "PATIENT" AS patient_id
-    ,"Id" AS encounter_id
-    ,"CODE" AS encounter_code -- used for tests, not intended for final output
-    ,"DESCRIPTION" as encounter_description -- used for tests, not intended for final output
-
-    -- for testing only:
-    -- ,TRY_CAST(NULLIF("START", 'NA') AS TIMESTAMP) AS start
-    -- ,TRY_CAST(NULLIF("STOP",  'NA') AS TIMESTAMP) AS stop
-
-    ,CAST("START" AS TIMESTAMP) AS encounter_start_timestamp
-    ,CAST("STOP" AS TIMESTAMP) AS encounter_stop_timestamp
-    ,"REASONDESCRIPTION" AS encounter_reason
+	"PATIENT" AS patient_id
+	,"Id" AS encounter_id
+	,"CODE" AS encounter_code
+	,"DESCRIPTION" AS encounter_description
+	,TRY_CAST("START" AS TIMESTAMP) AS encounter_start_timestamp
+	,TRY_CAST("STOP" AS TIMESTAMP) AS encounter_stop_timestamp
+	,"REASONDESCRIPTION" AS encounter_reason
 FROM encounters_src
 ;
 
 -- ==============================================================================
--- CREATE OR REPLACE TEMP VIEW medications
---   - patient, encounter, code, description, start (DATE), stop (DATE | NULL)
---   - known duplicate rows → SELECT DISTINCT on full row
---   - 'NA' handled via NULLSTR and/or TRY_CAST for nullable date fields
+-- medications
+--   - START/STOP are DATE fields in the provided datasets
+--   - STOP may be NULL (after NULLSTR='NA'), so use TRY_CAST
+--   - SELECT DISTINCT removes exact duplicate rows only
 -- ==============================================================================
 CREATE OR REPLACE TEMP VIEW medications AS
 WITH medications_src AS (
-    SELECT *
-    FROM read_csv_auto(
-        dataset_root() || '/medications.csv'
-        ,SAMPLE_SIZE = -1
-        ,NULLSTR = 'NA'
-        ,types = {
-            'CODE':'VARCHAR'
-        }
-    )
+	SELECT *
+	FROM read_csv_auto(
+		dataset_root() || '/medications.csv'
+		,SAMPLE_SIZE = -1
+		,NULLSTR = 'NA'
+		,types = { 'CODE':'VARCHAR' }
+	)
 )
-
 SELECT DISTINCT
-    "PATIENT" AS patient_id
-    ,"ENCOUNTER" AS encounter_id
-    ,"CODE" AS medication_code
-    ,"DESCRIPTION" AS medication_description
-    ,CAST("START" AS DATE) AS medication_start_date -- these fields are provided in date format
-    ,CAST("STOP"  AS DATE) AS medication_stop_date -- we only cast them as date in case read_csv_auto chose the wrong type
+	"PATIENT" AS patient_id
+	,"ENCOUNTER" AS encounter_id
+	,"CODE" AS medication_code
+	,"DESCRIPTION" AS medication_description
+	,TRY_CAST("START" AS DATE) AS medication_start_date
+	,TRY_CAST("STOP" AS DATE) AS medication_stop_date
 FROM medications_src
 ;
 
 -- ==============================================================================
--- CREATE OR REPLACE TEMP VIEW patients
---   - id, birthdate (DATE), deathdate (DATE | NULL)
---   - deathdate contains 'NA' → NULL → CAST
+-- patients
+--   - BIRTHDATE is required
+--   - DEATHDATE may be NULL (after NULLSTR='NA')
 -- ==============================================================================
 CREATE OR REPLACE TEMP VIEW patients AS
 SELECT
-    "Id" as patient_id
-    ,CAST("BIRTHDATE" AS DATE) AS birthdate
-    ,CAST("DEATHDATE" AS DATE) AS deathdate
+	"Id" AS patient_id
+	,TRY_CAST("BIRTHDATE" AS DATE) AS birthdate
+	,TRY_CAST("DEATHDATE" AS DATE) AS deathdate
 FROM read_csv_auto(
-    dataset_root() || '/patients.csv'
-    ,SAMPLE_SIZE = -1
-    ,NULLSTR = 'NA'
+	dataset_root() || '/patients.csv'
+	,SAMPLE_SIZE = -1
+	,NULLSTR = 'NA'
 );
