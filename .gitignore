@@ -18,4 +18,4 @@ output/
 docs/data-dictionary.xlsx
 
 # --- Local-only test outputs / scratch ---
-sql/pipeline/tests/sample_data_validation/
+sql/pipeline/tests/sample_data/
