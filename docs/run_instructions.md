@@ -5,7 +5,7 @@
 * SQL engine: **DuckDB**
 * Execution context: local CLI + DuckDB interactive shell
 * Operating system: macOS (portable to Linux/Windows)
-* No external services required
+* No external services or dependencies are required
 
 This project is intentionally SQL-first and does not depend on Python, dbt, or orchestration tooling.
 
@@ -44,7 +44,7 @@ CREATE OR REPLACE MACRO dataset_root() AS '../../datasets/sample';
 -- CREATE OR REPLACE MACRO dataset_root() AS '../../datasets/prod';
 ```
 
-To switch datasets, comment/uncomment the appropriate line.
+To switch datasets, comment/uncomment the appropriate line. By default, the sample dataset is active since this dataset is provided in the repository.
 
 ---
 
@@ -62,6 +62,8 @@ Use your package manager if available, or download the DuckDB CLI binary from Du
 Download the DuckDB CLI executable from DuckDB releases and add it to your PATH (optional).
 
 ## Start DuckDB
+
+Relative paths inside the SQL scripts assume DuckDB is launched from `sql/pipeline`. Running from another directory will cause file path errors.
 
 Navigate to the pipeline directory:
 
@@ -98,7 +100,13 @@ This script creates a TEMP VIEW:
 
 The view represents one row per `patient_id + encounter_id` and includes all derived metrics.
 
-A trailing `SELECT` is included for interactive inspection.
+### 3. (Optional) Output final cohort to .csv for further analysis
+
+```text
+.read 30_output_csv.sql
+```
+
+This script writes `overdose_cohort.csv` to `../../output/`, overwriting any existing file with the same name.
 
 ---
 
@@ -109,7 +117,7 @@ Validation queries live under:
 ```
 sql/pipeline/tests/
 ```
-Tests can be run using this syntax:
+Tests can be executed individually:
 
 ```text
 .read tests/<test_name>
@@ -122,10 +130,6 @@ Tests are read-only and do not modify pipeline outputs.
 
 ## Outputs
 
-To output the TEMP VIEW overdose_cohort as a .csv for later use:
-```text
-.read 30_output_csv.sql
-```
 * Any exported CSVs or derived files should be written to `/output`
 * `/output` is gitignored and intended for local inspection only
 
@@ -133,6 +137,20 @@ To output the TEMP VIEW overdose_cohort as a .csv for later use:
 
 ## Notes
 
-* TEMP VIEWs are session-scoped; restarting DuckDB requires re-running ingestion and cohort creation scripts
+* TEMP VIEWs are session-scoped; restarting DuckDB requires re-running ingestion and cohort creation scripts (`10_normalize_sources.sql` and `20_build_cohort.sql`)
 * The pipeline is designed for clarity and correctness rather than maximum performance
 * This structure mirrors analytics-engineering workflows used in production environments
+
+---
+
+## Reproducibility
+
+To fully reproduce results from a clean session:
+
+```text
+cd sql/pipeline
+duckdb
+.read 10_normalize_sources.sql
+.read 20_build_cohort.sql
+.read tests/00_<example_test>.sql
+```
