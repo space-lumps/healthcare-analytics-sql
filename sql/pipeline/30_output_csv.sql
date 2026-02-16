@@ -1,4 +1,25 @@
--- Write final output to .CSV file:
+-- ============================================================
+-- 30_output_csv.sql
+-- Purpose:
+--   Export finalized overdose cohort to CSV for downstream use
+--   (analysis, submission, dashboarding, or QA snapshotting).
+--
+-- Input:
+--   TEMP VIEW: overdose_cohort
+--
+-- Output:
+--   ../../output/overdose_cohort.csv
+--
+-- Preconditions:
+--   1. 10_normalize_sources.sql executed
+--   2. 20_build_cohort.sql executed
+--
+-- Notes:
+--   - Output directory must exist
+--   - File will be overwritten if it already exists
+--   - NULL readmission dates remain NULL (no placeholder substitution)
+-- ============================================================
+
 COPY (
     SELECT
         patient_id                      AS PATIENT_ID
@@ -10,10 +31,6 @@ COPY (
         ,current_opioid_ind             AS CURRENT_OPIOID_IND
         ,readmission_90_day_ind         AS READMISSION_90_DAY_IND
         ,readmission_30_day_ind         AS READMISSION_30_DAY_IND
-        ,COALESCE(
-            CAST(first_readmission_timestamp AS VARCHAR)
-        ,'N/A'
-        )                               
         ,first_readmission_timestamp    AS FIRST_READMISSION_DATE
     FROM overdose_cohort
 ) TO '../../output/overdose_cohort.csv'
