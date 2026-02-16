@@ -225,7 +225,7 @@ WITH qualifying_encounters AS (
     SELECT
         cohort.patient_id
         ,cohort.encounter_id
-        ,cohort.encounter_start_timestamp AS hospital_encounter_timestamp
+        ,cohort.encounter_start_timestamp
         ,cohort.encounter_stop_timestamp
         ,cohort.age_at_visit
         
