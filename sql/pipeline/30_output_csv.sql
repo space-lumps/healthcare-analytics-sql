@@ -3,7 +3,7 @@ COPY (
     SELECT
         patient_id                      AS PATIENT_ID
         ,encounter_id                   AS ENCOUNTER_ID
-        ,hospital_encounter_timestamp   AS HOSPITAL_ENCOUNTER_DATE
+        ,encounter_start_timestamp      AS HOSPITAL_ENCOUNTER_DATE
         ,age_at_visit                   AS AGE_AT_VISIT
         ,death_at_visit_ind             AS DEATH_AT_VISIT_IND
         ,count_current_meds             AS COUNT_CURRENT_MEDS
