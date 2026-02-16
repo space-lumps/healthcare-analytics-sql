@@ -1,5 +1,5 @@
 -- ==============================================================================
--- 04_no_na.sql
+-- 04_recon_no_na.sql
 -- Purpose:
 --   Ensure the literal string 'NA' is not leaking through after ingestion + casting.
 --
