@@ -1,5 +1,5 @@
 -- ============================================================
--- 05__nulls_and_ranges.sql
+-- 09_nulls_and_ranges.sql
 -- Purpose:
 --   Data quality checks: allowed ranges, non-negativity, enums.
 -- PASS condition:
@@ -34,9 +34,10 @@ WHERE 1 = 1
 SELECT
     overdose_cohort.patient_id
     ,overdose_cohort.encounter_id
-    ,overdose_cohort.hospital_encounter_date
-    ,overdose_cohort.first_readmission_date
+    ,overdose_cohort.encounter_start_timestamp
+    ,overdose_cohort.first_readmission_timestamp
+    ,overdose_cohort.age_at_visit
 FROM overdose_cohort
 WHERE 1 = 1
-    AND overdose_cohort.first_readmission_date IS NOT NULL
-    AND overdose_cohort.first_readmission_date < overdose_cohort.hospital_encounter_date;
+    AND overdose_cohort.first_readmission_timestamp IS NOT NULL
+    AND overdose_cohort.first_readmission_timestamp < overdose_cohort.encounter_start_timestamp;

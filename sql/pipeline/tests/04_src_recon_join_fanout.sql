@@ -1,5 +1,5 @@
 -- ============================================================
--- 07__join_explosion_reconciliation.sql
+-- 07_src_recon_join_fanout.sql
 -- Purpose:
 --   Detect join fan-out that gets hidden by the final GROUP BY.
 -- PASS:
@@ -8,43 +8,60 @@
 
 WITH qualifying_encounters AS (
     SELECT
-        encounters.patient AS patient_id
-        ,encounters.id AS encounter_id
-        ,encounters.start AS hospital_encounter_date
-        ,encounters.stop AS encounter_end_date
+        encounters.patient_id
+        ,encounters.encounter_id
+        ,encounters.encounter_start_timestamp
+        ,encounters.encounter_stop_timestamp
     FROM encounters
     WHERE 1 = 1
-        AND encounters.reasondescription = 'Drug overdose'
-        AND encounters.start > DATE '1999-07-15'
+        AND encounters.encounter_reason = 'Drug overdose'
+        AND encounters.encounter_start_timestamp >= TIMESTAMP '1999-07-16 00:00:00' -- AFTER 7/15
+
 )
 ,cohort AS (
     SELECT
         qualifying_encounters.patient_id
         ,qualifying_encounters.encounter_id
-        ,qualifying_encounters.hospital_encounter_date
-        ,qualifying_encounters.encounter_end_date
+        ,qualifying_encounters.encounter_start_timestamp
+        ,qualifying_encounters.encounter_stop_timestamp
     FROM qualifying_encounters
     INNER JOIN patients
-        ON patients.id = qualifying_encounters.patient_id
+        ON patients.patient_id = qualifying_encounters.patient_id
     WHERE 1 = 1
-        AND DATE_DIFF('year', patients.birthdate, qualifying_encounters.hospital_encounter_date) BETWEEN 18 AND 35
+        AND (        
+            EXTRACT(YEAR FROM qualifying_encounters.encounter_start_timestamp)
+            - EXTRACT(YEAR FROM patients.birthdate)
+            - CASE
+                WHEN
+                    EXTRACT(MONTH FROM qualifying_encounters.encounter_start_timestamp)
+                        < EXTRACT(MONTH FROM patients.birthdate)
+                    OR (
+                        EXTRACT(MONTH FROM qualifying_encounters.encounter_start_timestamp)
+                            = EXTRACT(MONTH FROM patients.birthdate)
+                        AND EXTRACT(DAY FROM qualifying_encounters.encounter_start_timestamp)
+                            < EXTRACT(DAY FROM patients.birthdate)
+                    )
+                THEN 1
+                ELSE 0
+            END  
+        ) BETWEEN 18 AND 35
 )
 ,current_meds AS (
     SELECT
         cohort.patient_id
         ,cohort.encounter_id
-        ,medications.code AS medication_code
-        ,medications.description AS medication_description
-        ,medications.start AS medication_start_date
-        ,medications.stop AS medication_stop_date
+        ,medications.medication_code
+        ,medications.medication_description
+        ,medications.medication_start_date
+        ,medications.medication_stop_date
     FROM medications
     INNER JOIN cohort
-        ON medications.patient = cohort.patient_id
+        ON medications.patient_id = cohort.patient_id
     WHERE 1 = 1
-        AND medications.start < cohort.hospital_encounter_date
+        AND medications.medication_start_date < cohort.encounter_start_timestamp
         AND (
-            medications.stop IS NULL
-            OR  medications.stop >= cohort.hospital_encounter_date
+            medications.medication_stop_date IS NULL
+            OR  medications.medication_stop_date >= cohort.encounter_start_timestamp
         )
 )
 ,opioids_list AS (
@@ -69,16 +86,16 @@ WITH qualifying_encounters AS (
     SELECT
         first_encounter.patient_id
         ,first_encounter.encounter_id AS first_encounter_id
-        ,MIN(readmit.hospital_encounter_date) AS first_readmission_date
+        ,MIN(readmit.encounter_start_timestamp) AS first_readmission_timestamp
     FROM cohort first_encounter
     INNER JOIN cohort readmit
         ON first_encounter.patient_id = readmit.patient_id
-        AND readmit.hospital_encounter_date > first_encounter.encounter_end_date
-        AND readmit.hospital_encounter_date
-            <= CAST(first_encounter.encounter_end_date + INTERVAL '90 days' AS DATE)
+        AND readmit.encounter_start_timestamp > first_encounter.encounter_stop_timestamp
+        AND readmit.encounter_start_timestamp
+            <= CAST(first_encounter.encounter_stop_timestamp + INTERVAL '90 days' AS TIMESTAMP)
     GROUP BY
         first_encounter.patient_id
-        ,first_encounter.encounter_id
+        ,first_encounter_id
 )
 
 -- This is the critical check:
