@@ -1,5 +1,5 @@
 -- ============================================================
--- 09_nulls_and_ranges.sql
+-- 31_nulls_and_ranges.sql
 -- Purpose:
 --   Data quality checks: allowed ranges, non-negativity, enums.
 -- PASS condition:

@@ -1,5 +1,5 @@
 -- ============================================================
--- 06_grain.sql
+-- 11_grain.sql
 -- Purpose:
 --   Enforce cohort grain + key integrity.
 -- PASS condition:

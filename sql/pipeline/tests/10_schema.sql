@@ -1,5 +1,5 @@
 -- ============================================================
--- 01__schema_and_types.sql
+-- 10_schema.sql
 -- Purpose:
 --   Sanity-check expected columns exist and are selectable.
 

@@ -1,5 +1,5 @@
 -- ============================================================
--- 07_src_recon_join_fanout.sql
+-- 03_recon_fanout.sql
 -- Purpose:
 --   Detect join fan-out that gets hidden by the final GROUP BY.
 -- PASS:

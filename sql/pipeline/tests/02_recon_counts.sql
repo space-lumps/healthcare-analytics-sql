@@ -1,5 +1,5 @@
 -- ============================================================
--- 03_src_recon_counts.sql
+-- 02_recon_counts.sql
 -- Purpose:
 --   Compares final counts from overdose_cohort to expected counts 
 --     from source files

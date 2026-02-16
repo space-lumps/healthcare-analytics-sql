@@ -1,5 +1,5 @@
 -- ============================================================
--- 03__cohort_criteria.sql
+-- 20_cohort_criteria.sql
 -- Purpose:
 --   Validate cohort criteria are satisfied in the final output.
 -- PASS condition:

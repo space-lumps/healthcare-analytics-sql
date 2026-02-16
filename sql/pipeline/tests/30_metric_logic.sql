@@ -1,5 +1,5 @@
 -- ============================================================
--- 08_metric_logic.sql
+-- 30_metric_logic.sql
 -- Purpose:
 --   Validate derived metric logic against sources.
 -- PASS condition:

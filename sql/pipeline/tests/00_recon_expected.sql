@@ -1,5 +1,5 @@
 -- ============================================================
--- 06__source_reconciliation.sql
+-- 00_recon_expected.sql
 -- Purpose:
 --   Validate cohort selection correctness vs source data.
 -- ============================================================
