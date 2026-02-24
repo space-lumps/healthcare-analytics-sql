@@ -1,4 +1,6 @@
 # Healthcare Analytics - Clinical Cohort Construction in SQL
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 
 ### Overview
 
@@ -164,3 +166,12 @@ This project follows analytics engineering principles:
 * Documented assumptions and tested constraints  
 
 The workflow mirrors patterns used in healthcare analytics and production SQL pipelines.
+
+---
+
+### License
+
+MIT License  
+Copyright (c) 2026 Corin Stedman  
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
