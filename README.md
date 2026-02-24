@@ -155,9 +155,9 @@ Notes:
 
 ---
 
-### Notes
+### Design Philosophy
 
-This project follows analytics engineering principles:
+This project follows analytics engineering best practices:
 
 * Explicit grain definition  
 * Deterministic business logic  
@@ -165,7 +165,15 @@ This project follows analytics engineering principles:
 * Independent QA validation  
 * Documented assumptions and tested constraints  
 
-The workflow mirrors patterns used in healthcare analytics and production SQL pipelines.
+These principles ensure the pipeline is reproducible, auditable, and production-like, mirroring workflows in healthcare and clinical data teams.
+
+### Key Takeaways & Lessons Learned
+
+- **Dedicated QA/validation is non-negotiable** — Writing standalone test queries for critical logic (age calculation, readmission flags, grain integrity) catches subtle bugs that simple counts miss and builds confidence for downstream use.
+- **Modular, numbered SQL files enhance debuggability** — Sequencing scripts (10_normalize → 20_cohort → 30_output + tests/) allows independent execution, easier troubleshooting, and clearer collaboration compared to monolithic queries.
+- **DuckDB excels for local prototyping** — Running full pipelines on sample data with near-production SQL syntax enables rapid iteration without spinning up a database server or dealing with connection overhead.
+- **Transparent documentation of assumptions prevents misinterpretation** — Maintaining a separate assumptions.md file (plus inline comments) clarifies scope, edge cases, and design decisions for reviewers or future self.
+- **Cohort logic is the foundation** — Investing upfront in precise, reproducible cohort definition avoids propagating errors through feature derivation and metrics.
 
 ---
 
