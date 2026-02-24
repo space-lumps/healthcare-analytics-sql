@@ -1,0 +1,41 @@
+name: SQL Pipeline Smoke Test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  smoke-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout the repository code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Install DuckDB CLI (latest stable version)
+      - name: Install DuckDB
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget unzip
+          wget https://github.com/duckdb/duckdb/releases/download/v1.1.0/duckdb_cli-linux-amd64.zip
+          unzip duckdb_cli-linux-amd64.zip
+          chmod +x duckdb
+          sudo mv duckdb /usr/local/bin/
+
+      # Verify DuckDB is installed
+      - name: Verify DuckDB installation
+        run: duckdb --version
+
+      # Run the main pipeline scripts from the correct directory
+      - name: Execute normalization script
+        working-directory: sql/pipeline
+        run: |
+          duckdb -init "" < 10_normalize_sources.sql
+
+      - name: Execute cohort build script
+        working-directory: sql/pipeline
+        run: |
+          duckdb -init "" < 20_build_cohort.sql
