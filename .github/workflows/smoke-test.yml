@@ -38,3 +38,42 @@ jobs:
           .read 10_normalize_sources.sql
           .read 20_build_cohort.sql
           EOF
+
+  validate-output:
+    runs-on: ubuntu-latest
+    needs: smoke-test
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install DuckDB
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget unzip
+          wget https://github.com/duckdb/duckdb/releases/download/v1.1.0/duckdb_cli-linux-amd64.zip
+          unzip duckdb_cli-linux-amd64.zip
+          chmod +x duckdb
+          sudo mv duckdb /usr/local/bin/
+
+      - name: Run full pipeline and generate output CSV
+        working-directory: sql/pipeline
+        run: |
+          # Execute all three scripts in a single session so state persists
+          duckdb -init "" <<EOF
+          .read 10_normalize_sources.sql
+          .read 20_build_cohort.sql
+          .read 30_output_csv.sql
+          EOF
+
+      - name: Verify cohort.csv exists and is non-empty
+        working-directory: sql/pipeline
+        run: |
+          FILE="../../output/cohort.csv"
+          if [ -f "$FILE" ] && [ -s "$FILE" ]; then
+            echo "Output file exists and has content ✓"
+            ls -lh "$FILE"
+            head -n 5 "$FILE"  # Show first few rows for log visibility
+          else
+            echo "Output file missing or empty ✗"
+            exit 1
+          fi
