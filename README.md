@@ -1,6 +1,21 @@
 # Healthcare Analytics - Clinical Cohort Construction in SQL
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Objective](#objective)
+- [Cohort Definition](#cohort-definition)
+- [Metrics & Features Produced](#metrics--features-produced)
+- [Validation & QA](#validation--qa)
+- [Repository Structure](#repository-structure)
+- [How to Run](#how-to-run)
+- [Data](#data)
+- [Design Philosophy](#design-philosophy)
+- [Key Takeaways & Lessons Learned](#key-takeaways--lessons-learned)
+- [License](#license)
+
+---
 
 ### Overview
 
