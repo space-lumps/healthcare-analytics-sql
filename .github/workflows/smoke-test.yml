@@ -72,7 +72,7 @@ jobs:
       - name: Verify cohort.csv exists and is non-empty
         working-directory: sql/pipeline
         run: |
-          FILE="../../output/cohort.csv"
+          FILE="../../output/overdose_cohort.csv"
           if [ -f "$FILE" ] && [ -s "$FILE" ]; then
             echo "Output file exists and has content ✓"
             ls -lh "$FILE"
