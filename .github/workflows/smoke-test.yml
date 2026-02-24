@@ -29,13 +29,12 @@ jobs:
       - name: Verify DuckDB installation
         run: duckdb --version
 
-      # Run the main pipeline scripts from the correct directory
-      - name: Execute normalization script
+      # Run normalization + cohort in a single DuckDB session so TEMP VIEWs are shared
+      - name: Execute core pipeline scripts in one session
         working-directory: sql/pipeline
         run: |
-          duckdb -init "" < 10_normalize_sources.sql
-
-      - name: Execute cohort build script
-        working-directory: sql/pipeline
-        run: |
-          duckdb -init "" < 20_build_cohort.sql
+          # Pipe both scripts into the same DuckDB process
+          duckdb -init "" <<EOF
+          .read 10_normalize_sources.sql
+          .read 20_build_cohort.sql
+          EOF
