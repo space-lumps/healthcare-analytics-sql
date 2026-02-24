@@ -58,6 +58,10 @@ jobs:
       - name: Run full pipeline and generate output CSV
         working-directory: sql/pipeline
         run: |
+          # Create the output directory if it does not exist
+          # (GitHub Actions runner has a clean environment; output/ is gitignored)
+          mkdir -p ../../output
+
           # Execute all three scripts in a single session so state persists
           duckdb -init "" <<EOF
           .read 10_normalize_sources.sql
