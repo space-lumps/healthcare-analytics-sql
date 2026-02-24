@@ -1,5 +1,7 @@
 # Healthcare Analytics - Clinical Cohort Construction in SQL
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![DuckDB](https://img.shields.io/badge/DuckDB-1.1+-yellow?logo=duckdb&logoColor=white)](https://duckdb.org/)
+[![DuckDB Dialect](https://img.shields.io/badge/DuckDB%20Dialect-blue?logo=duckdb&logoColor=white)](https://duckdb.org/docs/sql/introduction)
 
 ## Table of Contents
 
