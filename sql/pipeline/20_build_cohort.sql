@@ -4,8 +4,9 @@
 --   Build an analysis-ready cohort of drug overdose hospital encounters.
 --
 -- Cohort criteria:
---   - encounters.reasondescription = 'Drug overdose' (Validated in tests: no qualifying overdose encounters have NULL encounter_reason)
---   - encounter start date > 1999-07-15
+--   - encounters.reasondescription = 'Drug overdose' (Validated in tests: no qualifying overdose
+--     encounters have NULL encounter_reason)
+--   - encounter start date >= 1999-07-16
 --   - age at encounter between 18 and 35 (inclusive)
 --
 -- Metrics produced (one row per patient_id + encounter_id):
@@ -22,13 +23,14 @@
 -- Notes:
 --   - Requires 10_normalize_sources.sql to be executed first
 --     (encounters, medications, patients TEMP VIEWs must exist)
+--   - Uses multiple TEMP VIEWs instead of a single large CTE chain to improve:
+--       • debuggability (inspect intermediate results independently)
+--       • readability (clear separation of logical stages)
+--       • reusability (shared views for tests and future analysis)
 -- ============================================================
 
-CREATE OR REPLACE TEMP VIEW overdose_cohort AS
--- Define qualifying_encounters: 1 row per encounter_id (after dedupe)
---   - filter encounters to drug overdose + date threshold
---   - these are not yet filtered by patient age
-WITH qualifying_encounters AS (
+-- qualifying_encounters: 1 row per distinct overdose encounter (date-filtered, pre-age check)
+CREATE OR REPLACE TEMP VIEW qualifying_encounters AS
     SELECT DISTINCT
         encounters.patient_id
         ,encounters.encounter_id
@@ -39,17 +41,15 @@ WITH qualifying_encounters AS (
     WHERE 1 = 1
         AND encounters.encounter_reason = 'Drug overdose'
         AND encounters.encounter_start_timestamp >= TIMESTAMP '1999-07-16 00:00:00' -- AFTER 7/15
-)
--- Define patient_age_at_visit: 1 row per patient_id + encounter_id
---   - join patients
---   - compute age_at_visit here so that the complex calculation can live in its own CTE and be used downstream
-,patient_age_at_visit AS (
+;
+-- patient_age_at_visit: 1 row per qualifying encounter + patient details (includes precise age calculation)
+CREATE OR REPLACE TEMP VIEW patient_age_at_visit AS
     SELECT
         qualifying_encounters.patient_id
         ,qualifying_encounters.encounter_id
         ,qualifying_encounters.encounter_start_timestamp
         ,qualifying_encounters.encounter_stop_timestamp
-        -- do not use DATE_DIFF for age computations bc it does not have granularity down to the day and ages will be incorrect
+        -- do not use DATE_DIFF for age computations bc it does not have granularity down to the day
         ,(
             EXTRACT(YEAR FROM qualifying_encounters.encounter_start_timestamp)
             - EXTRACT(YEAR FROM patients.birthdate)
@@ -75,12 +75,9 @@ WITH qualifying_encounters AS (
     FROM qualifying_encounters
     INNER JOIN patients
         ON patients.patient_id = qualifying_encounters.patient_id
-   
-)
--- Define all_patients: 1 row per patient_id + encounter_id (index encounters only)
---   - This returns all patients age 18 or above, which also appear in qualifying encounters
---   - Note: we only filter for age > 18, as we will need ages above the cohort age filter for readmissions (specifically age 36)
-,all_patients AS (
+;
+-- all_patients: 1 row per qualifying encounter for patients aged 18+ (supports readmission tracking beyond age 35)
+CREATE OR REPLACE TEMP VIEW all_patients AS
     SELECT DISTINCT
         qualifying_encounters.patient_id
         ,qualifying_encounters.encounter_id
@@ -98,10 +95,9 @@ WITH qualifying_encounters AS (
 
     WHERE 1 = 1
         AND patient_age_at_visit.age_at_visit >= 18
-)
--- Define cohort: 1 row per patient_id + encounter_id (index encounters only)
---   - This includes all patients age 18-35 at time of first qualifying encounter
-,cohort AS (
+;
+-- cohort: 1 row per qualifying encounter where patient age is 18–35 at encounter time
+CREATE OR REPLACE TEMP VIEW cohort AS
     SELECT
         all_patients.patient_id
         ,all_patients.encounter_id
@@ -114,10 +110,9 @@ WITH qualifying_encounters AS (
     FROM all_patients
     WHERE 1=1
         AND all_patients.age_at_visit BETWEEN 18 AND 35
-)
--- Define current_meds
---   - medications active at encounter start
-,current_meds AS (
+;
+-- current_meds: 1 row per active medication per cohort encounter
+CREATE OR REPLACE TEMP VIEW current_meds AS
     SELECT
         cohort.patient_id
         ,cohort.encounter_id
@@ -135,9 +130,10 @@ WITH qualifying_encounters AS (
             medications.medication_stop_date IS NULL
         OR  medications.medication_stop_date >= CAST(cohort.encounter_start_timestamp AS DATE)
     )
-)
--- Count of medications active at start of each specific encounter
-,current_meds_agg AS (
+;
+-- current_meds_agg: 1 row per cohort encounter with count of distinct active medications
+--   - Uses pipe-concat trick to distinguish same-code meds started on different dates
+CREATE OR REPLACE TEMP VIEW current_meds_agg AS
     SELECT
         current_meds.patient_id
         ,current_meds.encounter_id
@@ -149,20 +145,18 @@ WITH qualifying_encounters AS (
     GROUP BY
         current_meds.patient_id
         ,current_meds.encounter_id
-)
--- Define opioids_list
---   - keyword/token list for opioid identification
-,opioids_list AS (
+;
+-- opioids_list: static list of opioid keyword tokens for description matching
+CREATE OR REPLACE TEMP VIEW opioids_list AS
     SELECT *
-    FROM (VALUES
-        ('hydromorphone')
-        ,('fentanyl')
-        ,('oxycodone-acetaminophen')
-    ) AS opioids(opioid_token)
-)
--- Define current_opioids
---   - Subset of current_meds matching opioid tokens above
-,current_opioids AS (
+        FROM (VALUES
+            ('hydromorphone')
+            ,('fentanyl')
+            ,('oxycodone-acetaminophen')
+        ) AS opioids(opioid_token)
+;
+-- current_opioids: 1 row per distinct opioid match per cohort encounter
+CREATE OR REPLACE TEMP VIEW current_opioids AS 
     SELECT DISTINCT
         current_meds.patient_id
         ,current_meds.encounter_id
@@ -174,10 +168,9 @@ WITH qualifying_encounters AS (
     INNER JOIN opioids_list
         ON LOWER(current_meds.medication_description)
             LIKE '%' || opioids_list.opioid_token || '%'
-)
--- Opioid flag per encounter
---   - Flags each patient only if one of the active meds at encounter start was an opioid (as defined in opioids_list)
-,current_opioids_agg AS (
+;
+-- current_opioids_agg: 1 row per cohort encounter with opioid indicator (1 if any match)
+CREATE OR REPLACE TEMP VIEW current_opioids_agg AS 
     SELECT
         current_opioids.patient_id
         ,current_opioids.encounter_id
@@ -186,42 +179,35 @@ WITH qualifying_encounters AS (
     GROUP BY
         current_opioids.patient_id
         ,current_opioids.encounter_id
-)
-
--- Define readmissions: 1 row per patient_id + first_encounter_id (index encounter grain)
---   -> Finds first overdose readmission within 90 days
+;
+-- readmissions: 1 row per index encounter with earliest readmission details within 90 days
 --   - Join all_patients in readmissions in case a patient turned 36 after their first encounter
 --   - Counts may exceed distinct patients when a patient has multiple qualifying index encounters
 --   - DuckDB implementation uses ARG_MIN to return the encounter_id associated with the earliest readmission timestamp
---   - This syntax is more concise than sorting by row number (requires 2-3 CTEs) which would be necessary for other SQL engines
-,readmissions AS (
-	SELECT
-		cohort.patient_id
-		,cohort.encounter_id AS first_encounter_id
-		,cohort.encounter_start_timestamp AS first_encounter_timestamp
-		,ARG_MIN(all_patients.encounter_id, all_patients.encounter_start_timestamp) AS first_readmission_id
-		,MIN(all_patients.encounter_start_timestamp) AS first_readmission_timestamp
-
-		,cohort.age_at_visit AS first_encounter_age
-		,ARG_MIN(all_patients.age_at_visit, all_patients.encounter_start_timestamp) AS first_readmission_age
-		,MAX(all_patients.age_at_visit) AS last_readmission_age
-	FROM cohort
-	INNER JOIN all_patients
-		ON all_patients.patient_id = cohort.patient_id
-		AND all_patients.encounter_start_timestamp > cohort.encounter_stop_timestamp
-		AND all_patients.encounter_start_timestamp <= cohort.encounter_stop_timestamp + INTERVAL '90 days'
-	GROUP BY
-		cohort.patient_id
-		,cohort.encounter_id
-		,cohort.encounter_start_timestamp
-		,cohort.age_at_visit
-)
-
--- Final normalization (as CTE)
---   - Aggregate to one row per patient_id + encounter_id
---   - Compute indicator and count columns
-,cohort_final AS (
-    
+--   - This syntax is more concise than sorting by row number which would be necessary for other SQL engines
+CREATE OR REPLACE TEMP VIEW readmissions AS
+    SELECT
+        cohort.patient_id
+        ,cohort.encounter_id AS first_encounter_id
+        ,cohort.encounter_start_timestamp AS first_encounter_timestamp
+        ,ARG_MIN(all_patients.encounter_id, all_patients.encounter_start_timestamp) AS first_readmission_id
+        ,MIN(all_patients.encounter_start_timestamp) AS first_readmission_timestamp
+        ,cohort.age_at_visit AS first_encounter_age
+        ,ARG_MIN(all_patients.age_at_visit, all_patients.encounter_start_timestamp) AS first_readmission_age
+        ,MAX(all_patients.age_at_visit) AS last_readmission_age
+    FROM cohort
+    INNER JOIN all_patients
+        ON all_patients.patient_id = cohort.patient_id
+        AND all_patients.encounter_start_timestamp > cohort.encounter_stop_timestamp
+        AND all_patients.encounter_start_timestamp <= cohort.encounter_stop_timestamp + INTERVAL '90 days'
+    GROUP BY
+        cohort.patient_id
+        ,cohort.encounter_id
+        ,cohort.encounter_start_timestamp
+        ,cohort.age_at_visit
+;
+-- overdose_cohort: final analysis-ready cohort (1 row per patient_id + encounter_id with all indicators)
+CREATE OR REPLACE TEMP VIEW overdose_cohort AS
     SELECT
         cohort.patient_id
         ,cohort.encounter_id
@@ -231,7 +217,10 @@ WITH qualifying_encounters AS (
         
         ,CASE
             WHEN cohort.deathdate IS NULL THEN 0
-            WHEN cohort.deathdate BETWEEN CAST(cohort.encounter_start_timestamp AS DATE) AND CAST(cohort.encounter_stop_timestamp AS DATE) THEN 1
+            WHEN cohort.deathdate BETWEEN
+                CAST(cohort.encounter_start_timestamp AS DATE) 
+                AND CAST(cohort.encounter_stop_timestamp AS DATE) 
+                THEN 1
             ELSE 0
         END AS death_at_visit_ind
 
@@ -259,7 +248,7 @@ WITH qualifying_encounters AS (
 
     FROM
         cohort
-    -- edit to joins to properly deduplicate rather than exploding rows by directly joining current_meds and current_opioids
+    -- join aggregators to avoid duplication by directly joining current_meds and current_opioids
     LEFT JOIN current_meds_agg
         ON current_meds_agg.patient_id = cohort.patient_id
         AND current_meds_agg.encounter_id = cohort.encounter_id
@@ -269,7 +258,4 @@ WITH qualifying_encounters AS (
     LEFT JOIN readmissions
         ON readmissions.patient_id = cohort.patient_id
         AND readmissions.first_encounter_id = cohort.encounter_id
-)
-
--- Final SELECT that defines TEMP VIEW cohort_output
-SELECT * FROM cohort_final;
+;
