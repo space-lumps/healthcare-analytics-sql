@@ -1,0 +1,75 @@
+name: SQL Pipeline Smoke Test
+
+on:
+  push:
+    branches:
+      - main
+      - 'refactor/**'
+  pull_request:
+    branches: [ main ]
+
+jobs:
+
+  data-quality-checks:
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout the repository code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Install DuckDB CLI (latest stable version)
+      - name: Install DuckDB (pinned to v1.1.0 for reproducibility)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget unzip
+          wget https://github.com/duckdb/duckdb/releases/download/v1.1.0/duckdb_cli-linux-amd64.zip
+          unzip duckdb_cli-linux-amd64.zip
+          chmod +x duckdb
+          sudo mv duckdb /usr/local/bin/
+
+
+      # Run pipeline and execute data quality validation tests in a single DuckDB session
+      # → TEMP VIEWs created early remain visible to later validation queries
+      # Note: 10_schema.sql is excluded here — it is a critical gate test that hard-fails on schema issues
+      #       and is run separately (e.g. in smoke-test phase) before other validations.
+      - name: Run pipeline and all data quality tests
+        working-directory: sql/pipeline
+        run: |
+          mkdir -p ../../output
+          duckdb :memory: <<EOF
+            .read 10_normalize_sources.sql
+            .read 20_build_cohort.sql
+            .read tests/00_recon_expected.sql
+            .read tests/01_recon_unexpected.sql
+            .read tests/02_recon_counts.sql
+            .read tests/03_recon_fanout.sql
+            .read tests/04_recon_no_na.sql
+            .read tests/11_grain.sql
+            .read tests/20_cohort_criteria.sql
+            .read tests/30_metric_logic.sql
+            .read tests/31_nulls_ranges.sql
+
+            -- Explicit success marker for logs (helps debugging)
+            SELECT 'All tests executed' AS status;
+          EOF > ../../output/test_output.log 2>&1
+
+      - name: Upload test log artifact on failure
+        if: failure()
+        working-directory: ${{ github.workspace }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-output-log
+          path: output/test_output.log  # relative to repo root
+
+      # Check if any test printed "FAIL:" — fail the job if yes
+      - name: Check test results
+        run: |
+          cd ../../output
+          FAIL_COUNT=$(grep -c "FAIL:" test_output.log || true)
+          if [ "$FAIL_COUNT" -gt 0 ]; then
+            echo "$FAIL_COUNT data quality test(s) failed."
+            grep -i -B 5 -A 5 "FAIL:" test_output.log || true
+            exit 1
+          else
+            echo "All data quality tests passed."
+          fi
