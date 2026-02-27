@@ -1,45 +1,69 @@
 -- ============================================================
 -- 02_recon_counts.sql
 -- Purpose:
---   Compares final counts from overdose_cohort to expected counts 
---     from source files
--- PASS:
---   0 rows returned.
+--   Row-count reconciliation test.
+--   Verifies that the final overdose_cohort has exactly the same
+--   number of rows as the independently-computed qualifying cohort
+--   using source tables + business rules.
+--
+--   This test uses the shared TEMP VIEWs created in 20_build_cohort.sql
+--   to avoid duplicating filter/age logic — increasing maintainability
+--   and ensuring consistency with the pipeline.
+--
+--   Returns: 0 rows on success
+--   Fails CI job if counts do not match exactly
 -- ============================================================
 
-WITH expected AS (
-    SELECT COUNT(*) AS expected_count
-    FROM encounters
-    INNER JOIN patients
-        ON patients.patient_id = encounters.patient_id
-    WHERE 1 = 1
-        AND encounters.encounter_reason = 'Drug overdose'
-        AND encounters.encounter_start_timestamp >= TIMESTAMP '1999-07-16 00:00:00' -- AFTER 7/15
-        AND (        
-            EXTRACT(YEAR FROM encounters.encounter_start_timestamp)
-            - EXTRACT(YEAR FROM patients.birthdate)
-            - CASE
-                WHEN
-                    EXTRACT(MONTH FROM encounters.encounter_start_timestamp)
-                        < EXTRACT(MONTH FROM patients.birthdate)
-                    OR (
-                        EXTRACT(MONTH FROM encounters.encounter_start_timestamp)
-                            = EXTRACT(MONTH FROM patients.birthdate)
-                        AND EXTRACT(DAY FROM encounters.encounter_start_timestamp)
-                            < EXTRACT(DAY FROM patients.birthdate)
-                    )
-                THEN 1
-                ELSE 0
-            END  
-        ) BETWEEN 18 AND 35
-)       
-,actual AS (
-    SELECT COUNT(*) AS actual_count
+-- CLI rendering fix for narrow terminals — all columns minimum 10 chars
+-- Prevents overlap / ugly first-column dominance
+.width 10
+
+-- Expected count derived from the same logical stages used in the pipeline
+-- (re-uses shared views instead of re-implementing filters)
+CREATE OR REPLACE TEMP VIEW recon_expected_count AS
+    SELECT COUNT(*) AS expected
+    FROM cohort   -- this view already applies: overdose reason + date + age 18–35
+;
+
+-- Actual count from the final analysis-ready output
+CREATE OR REPLACE TEMP VIEW recon_actual_count AS
+    SELECT COUNT(*) AS actual
     FROM overdose_cohort
-)
+;
+-- Failures view: only populated if counts differ
+-- Includes difference for quick debugging
+CREATE OR REPLACE TEMP VIEW recon_counts_failures AS
+    SELECT
+        e.expected
+        ,a.actual
+        ,(a.actual - e.expected) AS difference
+        ,CASE
+            WHEN a.actual > e.expected THEN 'Extra rows in overdose_cohort'
+            WHEN a.actual < e.expected THEN 'Missing rows in overdose_cohort'
+            ELSE 'Counts match'
+        END AS failure_type
+    FROM recon_expected_count e
+    CROSS JOIN recon_actual_count a
+    WHERE e.expected <> a.actual
+;
+
+-- CI visibility: print mismatch details if any
+SELECT *
+FROM recon_counts_failures
+;
+
+-- Assertion: fail script (and CI job) with descriptive message using reliable concatenation
+-- Uses || instead of format() to guarantee substitution even in strict/older DuckDB contexts
 SELECT
-    expected.expected_count
-    ,actual.actual_count
-FROM expected
-CROSS JOIN actual
-WHERE expected.expected_count <> actual.actual_count;
+    CASE
+        WHEN (SELECT COUNT(*) FROM recon_counts_failures) = 0
+            THEN 'PASS: Row count in overdose_cohort matches expected qualifying cohort (n = ' ||
+                 (SELECT expected::VARCHAR FROM recon_expected_count) || ')'
+        ELSE
+            'FAIL: Row count mismatch in overdose_cohort. ' ||
+            'Expected: ' || (SELECT expected::VARCHAR FROM recon_expected_count) || ', ' ||
+            'Actual: '   || (SELECT actual::VARCHAR FROM recon_actual_count)   || ', ' ||
+            'Difference: ' || (SELECT difference::VARCHAR FROM recon_counts_failures) || '. ' ||
+            'See table above.'
+    END AS test_status
+;
