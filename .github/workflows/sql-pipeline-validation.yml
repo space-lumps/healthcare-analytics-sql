@@ -19,6 +19,7 @@ jobs:
 
       # Install DuckDB CLI (latest stable version)
       - name: Install DuckDB (pinned to v1.1.0 for reproducibility)
+        shell: bash
         run: |
           sudo apt-get update
           sudo apt-get install -y wget unzip
@@ -30,45 +31,64 @@ jobs:
 
       # Run pipeline and execute data quality validation tests in a single DuckDB session
       # → TEMP VIEWs created early remain visible to later validation queries
-      # Note: 10_schema.sql is excluded here — it is a critical gate test that hard-fails on schema issues
-      #       and is run separately (e.g. in smoke-test phase) before other validations.
+      #   Note: 10_schema.sql is excluded here — it is run before other validations (in smoke-test phase).
       - name: Run pipeline and all data quality tests
         working-directory: sql/pipeline
+        shell: bash
         run: |
-          mkdir -p ../../output
-          duckdb :memory: <<EOF
-            .read 10_normalize_sources.sql
-            .read 20_build_cohort.sql
-            .read tests/00_recon_expected.sql
-            .read tests/01_recon_unexpected.sql
-            .read tests/02_recon_counts.sql
-            .read tests/03_recon_fanout.sql
-            .read tests/04_recon_no_na.sql
-            .read tests/11_grain.sql
-            .read tests/20_cohort_criteria.sql
-            .read tests/30_metric_logic.sql
-            .read tests/31_nulls_ranges.sql
+          # Create output folder at repo root (robust to wd changes)
+          mkdir -p $GITHUB_WORKSPACE/output
 
-            -- Explicit success marker for logs (helps debugging)
-            SELECT 'All tests executed' AS status;
-          EOF > ../../output/test_output.log 2>&1
+          # Run DuckDB with heredoc input, redirect output/err to log
+          duckdb :memory: <<EOF > $GITHUB_WORKSPACE/output/test_output.log 2>&1
+          .read 10_normalize_sources.sql
+          .read 20_build_cohort.sql
+          .read tests/00_recon_expected.sql
+          .read tests/01_recon_unexpected.sql
+          .read tests/02_recon_counts.sql
+          .read tests/03_recon_fanout.sql
+          .read tests/04_recon_no_na.sql
+          .read tests/11_grain.sql
+          .read tests/20_cohort_criteria.sql
+          .read tests/30_metric_logic.sql
+          .read tests/31_nulls_ranges.sql
 
+          -- Explicit success marker for logs (helps debugging)
+          SELECT 'All tests executed' AS status;
+          EOF
+
+          # Check DuckDB exit code (fails on fatal errors like file not found or syntax issues)
+          if [ $? -ne 0 ]; then
+            echo "DuckDB execution failed — see test_output.log for details"
+            cat $GITHUB_WORKSPACE/output/test_output.log
+            exit 1
+          fi
+
+          # Verify success marker exists (catches partial executions where DuckDB stopped early but exited 0)
+          if ! grep -q "All tests executed" $GITHUB_WORKSPACE/output/test_output.log; then
+            echo "Incomplete execution — success marker missing. See test_output.log for details"
+            cat $GITHUB_WORKSPACE/output/test_output.log
+            exit 1
+          fi
+
+      # Use a different path for output as the working directory is automatically set to root
       - name: Upload test log artifact on failure
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-output-log
           path: output/test_output.log
-          if-no-files-found: warn        # Optional: warns instead of erroring if log file missing
+          if-no-files-found: warn        # Warns instead of erroring if log file missing
 
       # Check if any test printed "FAIL:" — fail the job if yes
       - name: Check test results
+        shell: bash
         run: |
-          cd ../../output
-          FAIL_COUNT=$(grep -c "FAIL:" test_output.log || true)
+          # Grep for FAIL: in the log (robust path)
+          FAIL_COUNT=$(grep -c "FAIL:" $GITHUB_WORKSPACE/output/test_output.log || true)
           if [ "$FAIL_COUNT" -gt 0 ]; then
             echo "$FAIL_COUNT data quality test(s) failed."
-            grep -i -B 5 -A 5 "FAIL:" test_output.log || true
+            grep -i -B 5 -A 5 "FAIL:" $GITHUB_WORKSPACE/output/test_output.log || true
             exit 1
           else
             echo "All data quality tests passed."
