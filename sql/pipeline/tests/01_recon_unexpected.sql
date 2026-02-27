@@ -65,7 +65,7 @@ ORDER BY patient_id, encounter_id
 -- Uses error() which throws runtime exception in DuckDB → non-zero exit code
 SELECT
     CASE
-        WHEN (SELECT COUNT(*) FROM recon_unexpected_failures) = 1
+        WHEN (SELECT COUNT(*) FROM recon_unexpected_failures) = 0
             THEN 'PASS: No unexpected/extra encounters in overdose_cohort'
         ELSE
             'FAIL: ' ||

@@ -69,7 +69,7 @@ SELECT
             THEN 'PASS: All expected overdose encounters are present in overdose_cohort'
         ELSE
             'FAIL: ' ||
-            (SELECT COUNT(*) FROM recon_unexpected_failures)::VARCHAR || ' ' ||
+            (SELECT COUNT(*) FROM recon_expected_failures)::VARCHAR || ' ' ||
             'expected overdose encounter(s) missing from final cohort. ' ||
             'See table above for details.'
 
