@@ -1,4 +1,4 @@
-name: SQL Pipeline Smoke Test
+name: SQL Pipeline Validation Test
 
 on:
   push:
@@ -54,12 +54,12 @@ jobs:
           EOF > ../../output/test_output.log 2>&1
 
       - name: Upload test log artifact on failure
-        if: failure()
-        working-directory: ${{ github.workspace }}
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-output-log
-          path: output/test_output.log  # relative to repo root
+          path: output/test_output.log
+          if-no-files-found: warn        # Optional: warns instead of erroring if log file missing
 
       # Check if any test printed "FAIL:" — fail the job if yes
       - name: Check test results
