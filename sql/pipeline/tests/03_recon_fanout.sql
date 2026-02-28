@@ -105,7 +105,7 @@ ORDER BY base_rows DESC
 SELECT
     CASE
         WHEN (SELECT COUNT(*) FROM recon_fanout_failures) = 0 THEN
-            'PASS ✅: Fan-out test clean. ' ||
+            '✅ PASS: Fan-out test clean. ' ||
             'Base = '     || (SELECT base_rows::VARCHAR FROM recon_base_count)     || ' rows. ' ||
             'Pre-group = '|| (SELECT pre_group::VARCHAR FROM recon_pre_group_count) || '. ' ||
             'Final = '    || (SELECT final_rows::VARCHAR FROM recon_final_count)    || '. ' ||
@@ -119,7 +119,7 @@ SELECT
                 2
             )::VARCHAR
         ELSE
-            'FAIL ❌: Integrity violation in overdose_cohort joins/agg. ' ||
+            '❌ FAIL: Integrity violation in overdose_cohort joins/agg. ' ||
             'Base: '     || (SELECT base_rows::VARCHAR FROM recon_base_count)     || ' rows. ' ||
             'Pre-group: '|| (SELECT pre_group::VARCHAR FROM recon_pre_group_count) || '. ' ||
             'Final: '    || (SELECT final_rows::VARCHAR FROM recon_final_count)    || '. ' ||
