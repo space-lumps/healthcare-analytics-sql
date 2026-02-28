@@ -1,4 +1,4 @@
--- ============================================================
+-- ============================================================================
 -- 00_recon_expected.sql
 -- Purpose:
 --   Smoke / reconciliation test: Verify that EVERY encounter meeting
@@ -11,11 +11,7 @@
 --
 --   Returns: 0 rows on success
 --   Fails CI job if any expected encounter is missing
--- ============================================================
-
--- CLI rendering fix for narrow terminals — all columns minimum 10 chars
--- Prevents overlap / ugly first-column dominance
-.width 10
+-- ============================================================================
 
 -- Expected qualifying encounter keys derived directly from raw sources
 -- (mirrors exact inclusion criteria — no dependency on pipeline views)
@@ -55,23 +51,51 @@ CREATE OR REPLACE TEMP VIEW recon_expected_failures AS
     WHERE actual.encounter_id IS NULL
 ;
 
--- For CI visibility: print any failures immediately (appears in logs)
-SELECT *
+
+-- ----------------------------------------------------------------------------
+-- Visual log separator + blank line for clean separation in CI artifacts
+-- ----------------------------------------------------------------------------
+.mode list
+.separator ''
+.headers off
+SELECT REPEAT('=', 28) || ' START OF TEST FILE: tests/00_recon_expected.sql ' || REPEAT('=', 28);
+SELECT ' ';
+-- ----------------------------------------------------------------------------
+-- For CI visibility: print any failures immediately as table (appears in logs)
+-- Use CLI rendering fix for narrow terminals — all columns minimum 10 chars
+-- Prevents overlap / ugly first-column dominance
+-- ----------------------------------------------------------------------------
+.mode table
+.headers on
+SELECT
+*
 FROM recon_expected_failures
 ORDER BY patient_id, encounter_id
 ;
-
--- Assertion that fails the script (and thus CI job) with clear message
--- Uses error() which throws runtime exception in DuckDB → non-zero exit code
+-- ----------------------------------------------------------------------------
+-- Final verdict line — outputs ✅ PASS or ❌ FAIL for easy log scanning
+-- Uses plain text (no runtime error on FAIL) so all tests execute serially
+-- CI workflow greps for 'FAIL:' to detect issues after the full run
+-- ----------------------------------------------------------------------------
+.mode list
+.separator ''
+.headers off
 SELECT
     CASE
         WHEN (SELECT COUNT(*) FROM recon_expected_failures) = 0
-            THEN 'PASS: All expected overdose encounters are present in overdose_cohort'
+            THEN '✅ PASS: All expected overdose encounters are present in overdose_cohort'
         ELSE
-            'FAIL: ' ||
+            '❌ FAIL: ' ||
             (SELECT COUNT(*) FROM recon_expected_failures)::VARCHAR || ' ' ||
             'expected overdose encounter(s) missing from final cohort. ' ||
             'See table above for details.'
-
     END AS test_status
 ;
+-- ----------------------------------------------------------------------------
+-- File end marker plus extra blanklines between this and next test
+-- ----------------------------------------------------------------------------
+SELECT ' ';
+SELECT REPEAT('=', 29) || ' END OF TEST FILE: tests/00_recon_expected.sql ' || REPEAT('=', 29);
+SELECT ' ';
+SELECT ' ';
+-- End of test — next test output follows after blank lines
