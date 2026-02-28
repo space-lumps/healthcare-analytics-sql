@@ -19,10 +19,6 @@
 --   Fails CI if any invariant is violated (throws error with details)
 -- ============================================================
 
--- CLI rendering fix for narrow terminals — all columns minimum 10 chars
--- Prevents overlap / ugly first-column dominance
-.width 10
-
 -- Base count: number of qualifying index encounters (age 18–35, overdose, post-1999-07-16)
 CREATE OR REPLACE TEMP VIEW recon_base_count AS
     SELECT COUNT(*) AS base_rows
@@ -80,18 +76,36 @@ CREATE OR REPLACE TEMP VIEW recon_fanout_failures AS
            OR f.final_rows <> b.base_rows )
 ;
 
--- CI visibility: print failure details immediately if any invariants violated
-SELECT *
+-- ----------------------------------------------------------------------------
+-- Visual log separator + blank line for clean separation in CI artifacts
+-- ----------------------------------------------------------------------------
+.mode list
+.separator ''
+.headers off
+SELECT REPEAT('=', 29) || ' START OF TEST FILE: tests/03_recon_fanout.sql ' || REPEAT('=', 29);
+SELECT ' ';
+-- ----------------------------------------------------------------------------
+-- For CI visibility: print any failures immediately as table (appears in logs)
+-- ----------------------------------------------------------------------------
+.mode table
+.headers on
+SELECT 
+*
 FROM recon_fanout_failures
 ORDER BY base_rows DESC
 ;
-
--- Assertion: produce one clear PASS message with numbers, or throw detailed error on failure
--- Uses || concatenation for maximum reliability across DuckDB environments
+-- ----------------------------------------------------------------------------
+-- Final verdict line — outputs ✅ PASS or ❌ FAIL for easy log scanning
+-- Uses plain text (no runtime error on FAIL) so all tests execute serially
+-- CI workflow greps for 'FAIL:' to detect issues after the full run
+-- ----------------------------------------------------------------------------
+.mode list
+.separator ''
+.headers off
 SELECT
     CASE
         WHEN (SELECT COUNT(*) FROM recon_fanout_failures) = 0 THEN
-            'PASS: Fan-out test clean. ' ||
+            'PASS ✅: Fan-out test clean. ' ||
             'Base = '     || (SELECT base_rows::VARCHAR FROM recon_base_count)     || ' rows. ' ||
             'Pre-group = '|| (SELECT pre_group::VARCHAR FROM recon_pre_group_count) || '. ' ||
             'Final = '    || (SELECT final_rows::VARCHAR FROM recon_final_count)    || '. ' ||
@@ -105,7 +119,7 @@ SELECT
                 2
             )::VARCHAR
         ELSE
-            'FAIL: Integrity violation in overdose_cohort joins/agg. ' ||
+            'FAIL ❌: Integrity violation in overdose_cohort joins/agg. ' ||
             'Base: '     || (SELECT base_rows::VARCHAR FROM recon_base_count)     || ' rows. ' ||
             'Pre-group: '|| (SELECT pre_group::VARCHAR FROM recon_pre_group_count) || '. ' ||
             'Final: '    || (SELECT final_rows::VARCHAR FROM recon_final_count)    || '. ' ||
@@ -122,3 +136,11 @@ SELECT
 
     END AS test_status
 ;
+-- ----------------------------------------------------------------------------
+-- File end marker plus extra blanklines between this and next test
+-- ----------------------------------------------------------------------------
+SELECT ' ';
+SELECT REPEAT('=', 30) || ' END OF TEST FILE: tests/03_recon_fanout.sql ' || REPEAT('=', 30);
+SELECT ' ';
+SELECT ' ';
+-- End of test — next test output follows after blank lines

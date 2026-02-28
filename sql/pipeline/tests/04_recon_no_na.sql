@@ -10,10 +10,6 @@
 --   Covers main source tables + final overdose_cohort.
 -- ==============================================================================
 
--- CLI rendering fix for narrow terminals — all columns minimum 10 chars
--- Prevents overlap / ugly first-column dominance
-.width 10
-
 CREATE OR REPLACE TEMP VIEW na_violations AS
 
     -- encounters checks
@@ -95,25 +91,46 @@ CREATE OR REPLACE TEMP VIEW final_output AS
     WHERE na_row_count > 0
     ORDER BY na_row_count DESC, table_name, column_name
 ;
--- ==============================================================================
--- Final diagnostic output: show any 'NA' violations found
--- (this table will be empty on success)
--- ==============================================================================
-SELECT * FROM final_output;
 
--- ==============================================================================
--- Assertion: produce one PASS message when clean, or throw error with violation count
--- Uses reliable string concatenation (||) for DuckDB compatibility
--- ==============================================================================
+-- ----------------------------------------------------------------------------
+-- Visual log separator + blank line for clean separation in CI artifacts
+-- ----------------------------------------------------------------------------
+.mode list
+.separator ''
+.headers off
+SELECT REPEAT('=', 30) || ' START OF TEST FILE: tests/04_recon_no_na.sql ' || REPEAT('=', 29);
+SELECT ' ';
+-- ----------------------------------------------------------------------------
+-- For CI visibility: print any failures immediately as table (appears in logs)
+-- ----------------------------------------------------------------------------
+.mode table
+.headers on
+SELECT * FROM final_output;
+-- ----------------------------------------------------------------------------
+-- Final verdict line — outputs ✅ PASS or ❌ FAIL for easy log scanning
+-- Uses plain text (no runtime error on FAIL) so all tests execute serially
+-- CI workflow greps for 'FAIL:' to detect issues after the full run
+-- ----------------------------------------------------------------------------
+.mode list
+.separator ''
+.headers off
 SELECT
     CASE
         WHEN (SELECT COUNT(*) FROM final_output) = 0 THEN
-            'PASS: No "NA" string leaks detected in key columns across all tables'
+            '✅ PASS: No "NA" string leaks detected in key columns across all tables'
         ELSE
-            'FAIL: "NA" string leaks detected in ' ||
+            '❌ FAIL: "NA" string leaks detected in ' ||
             (SELECT COUNT(*)::VARCHAR FROM final_output) ||
             ' column(s). Total violation rows: ' ||
             (SELECT COALESCE(SUM(na_row_count), 0)::VARCHAR FROM final_output) ||
             '. See table above for details.'
     END AS test_status
 ;
+-- ----------------------------------------------------------------------------
+-- File end marker plus extra blanklines between this and next test
+-- ----------------------------------------------------------------------------
+SELECT ' ';
+SELECT REPEAT('=', 31) || ' END OF TEST FILE: tests/04_recon_no_na.sql ' || REPEAT('=', 30);
+SELECT ' ';
+SELECT ' ';
+-- End of test — next test output follows after blank lines

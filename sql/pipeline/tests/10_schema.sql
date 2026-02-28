@@ -20,10 +20,6 @@
 --   - All other tests use string 'PASS:' / 'FAIL:' output to allow full serial reporting.
 -- ============================================================
 
--- CLI rendering fix for narrow terminals — all columns minimum 10 chars
--- Prevents overlap / ugly first-column dominance
-.width 10
-
 -- Attempt to select every expected column from overdose_cohort
 -- If any column is missing or the view doesn't exist, DuckDB throws here
 CREATE OR REPLACE TEMP VIEW schema_smoke_test AS
@@ -46,4 +42,4 @@ CREATE OR REPLACE TEMP VIEW schema_smoke_test AS
 -- Trigger the check with a zero-row select (we only care about execution)
 SELECT * FROM schema_smoke_test LIMIT 1;
 -- If execution reaches this point → all columns are present and selectable
-SELECT 'PASS: All expected columns present and selectable in overdose_cohort' AS test_status;
+SELECT '✅ PASS: All expected columns present and selectable in overdose_cohort' AS test_status;

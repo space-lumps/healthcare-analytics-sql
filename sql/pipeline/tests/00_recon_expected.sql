@@ -51,7 +51,6 @@ CREATE OR REPLACE TEMP VIEW recon_expected_failures AS
     WHERE actual.encounter_id IS NULL
 ;
 
-
 -- ----------------------------------------------------------------------------
 -- Visual log separator + blank line for clean separation in CI artifacts
 -- ----------------------------------------------------------------------------
@@ -62,8 +61,6 @@ SELECT REPEAT('=', 28) || ' START OF TEST FILE: tests/00_recon_expected.sql ' ||
 SELECT ' ';
 -- ----------------------------------------------------------------------------
 -- For CI visibility: print any failures immediately as table (appears in logs)
--- Use CLI rendering fix for narrow terminals — all columns minimum 10 chars
--- Prevents overlap / ugly first-column dominance
 -- ----------------------------------------------------------------------------
 .mode table
 .headers on

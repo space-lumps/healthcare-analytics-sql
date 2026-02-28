@@ -19,10 +19,6 @@
 --   - No runtime exceptions → test suite continues
 -- ============================================================
 
--- CLI rendering fix for narrow terminals — all columns minimum 10 chars
--- Prevents overlap / ugly first-column dominance
-.width 10
-
 -- 1) Check for NULL primary keys
 CREATE OR REPLACE TEMP VIEW null_keys AS
     SELECT
@@ -64,7 +60,20 @@ CREATE OR REPLACE TEMP VIEW grain_violations AS
         ,violation_type
     FROM duplicates
 ;
--- Diagnostic output: show violations if any (empty table on success)
+
+-- ----------------------------------------------------------------------------
+-- Visual log separator + blank line for clean separation in CI artifacts
+-- ----------------------------------------------------------------------------
+.mode list
+.separator ''
+.headers off
+SELECT REPEAT('=', 33) || ' START OF TEST FILE: tests/11_grain.sql ' || REPEAT('=', 32);
+SELECT ' ';
+-- ----------------------------------------------------------------------------
+-- For CI visibility: print any failures immediately as table (appears in logs)
+-- ----------------------------------------------------------------------------
+.mode table
+.headers on
 SELECT 
         patient_id
         ,encounter_id
@@ -73,16 +82,29 @@ SELECT
 FROM grain_violations
 ORDER BY violation_type, patient_id, encounter_id
 ;
-
--- Final result: always one visible row (PASS or FAIL)
--- Formatted with explicit line breaks using spaces for readability in .mode table
+-- ----------------------------------------------------------------------------
+-- Final verdict line — outputs ✅ PASS or ❌ FAIL for easy log scanning
+-- Uses plain text (no runtime error on FAIL) so all tests execute serially
+-- CI workflow greps for 'FAIL:' to detect issues after the full run
+-- ----------------------------------------------------------------------------
+.mode list
+.separator ''
+.headers off
 SELECT
     CASE
         WHEN (SELECT COUNT(*) FROM grain_violations) = 0 THEN
-            'PASS: overdose_cohort grain intact (no NULL keys, no duplicates).'
+            '✅ PASS: overdose_cohort grain intact (no NULL keys, no duplicates).'
         ELSE
-            'FAIL: Grain violations in overdose_cohort (' ||
+            '❌ FAIL: Grain violations in overdose_cohort (' ||
             (SELECT COUNT(*)::VARCHAR FROM grain_violations) ||
             ' rows). See table above.'
     END AS test_status
 ;
+-- ----------------------------------------------------------------------------
+-- File end marker plus extra blanklines between this and next test
+-- ----------------------------------------------------------------------------
+SELECT ' ';
+SELECT REPEAT('=', 34) || ' END OF TEST FILE: tests/11_grain.sql ' || REPEAT('=', 33);
+SELECT ' ';
+SELECT ' ';
+-- End of test — next test output follows after blank lines

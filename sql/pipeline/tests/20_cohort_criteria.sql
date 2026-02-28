@@ -9,10 +9,6 @@
 --   These checks protect against silent filtering failures or incorrect derivations.
 -- ============================================================
 
--- CLI rendering fix for narrow terminals — minimum column width
--- Prevents overlap / ugly first-column dominance
-.width 10
-
 -- 1) Encounter reason must be 'Drug overdose' in source
 CREATE OR REPLACE TEMP VIEW invalid_reason AS
     SELECT
@@ -55,7 +51,19 @@ CREATE OR REPLACE TEMP VIEW cohort_criteria_violations AS
     UNION ALL SELECT * FROM invalid_age
 ;
 
--- Diagnostic output: show violating rows if any (empty table on success)
+-- ----------------------------------------------------------------------------
+-- Visual log separator + blank line for clean separation in CI artifacts
+-- ----------------------------------------------------------------------------
+.mode list
+.separator ''
+.headers off
+SELECT REPEAT('=', 28) || ' START OF TEST FILE: tests/20_cohort_criteria.sql ' || REPEAT('=', 27);
+SELECT ' ';
+-- ----------------------------------------------------------------------------
+-- For CI visibility: print any failures immediately as table (appears in logs)
+-- ----------------------------------------------------------------------------
+.mode table
+.headers on
 SELECT 
     patient_id
     ,encounter_id
@@ -63,15 +71,29 @@ SELECT
 FROM cohort_criteria_violations
 ORDER BY violation_type, patient_id, encounter_id
 ;
-
--- Final result: short PASS/FAIL message
+-- ----------------------------------------------------------------------------
+-- Final verdict line — outputs ✅ PASS or ❌ FAIL for easy log scanning
+-- Uses plain text (no runtime error on FAIL) so all tests execute serially
+-- CI workflow greps for 'FAIL:' to detect issues after the full run
+-- ----------------------------------------------------------------------------
+.mode list
+.separator ''
+.headers off
 SELECT
     CASE
         WHEN (SELECT COUNT(*) FROM cohort_criteria_violations) = 0 THEN
-            'PASS: All rows meet cohort criteria (reason, date, age)'
+            '✅ PASS: All rows meet cohort criteria (reason, date, age)'
         ELSE
-            'FAIL: Cohort criteria violations found (' ||
+            '❌ FAIL: Cohort criteria violations found (' ||
             (SELECT COUNT(*)::VARCHAR FROM cohort_criteria_violations) ||
             ' rows). See table above.'
     END AS test_status
 ;
+-- ----------------------------------------------------------------------------
+-- File end marker plus extra blanklines between this and next test
+-- ----------------------------------------------------------------------------
+SELECT ' ';
+SELECT REPEAT('=', 29) || ' END OF TEST FILE: tests/20_cohort_criteria.sql ' || REPEAT('=', 28);
+SELECT ' ';
+SELECT ' ';
+-- End of test — next test output follows after blank lines

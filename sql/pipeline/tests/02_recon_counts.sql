@@ -14,10 +14,6 @@
 --   Fails CI job if counts do not match exactly
 -- ============================================================
 
--- CLI rendering fix for narrow terminals — all columns minimum 10 chars
--- Prevents overlap / ugly first-column dominance
-.width 10
-
 -- Expected count derived from the same logical stages used in the pipeline
 -- (re-uses shared views instead of re-implementing filters)
 CREATE OR REPLACE TEMP VIEW recon_expected_count AS
@@ -47,23 +43,49 @@ CREATE OR REPLACE TEMP VIEW recon_counts_failures AS
     WHERE e.expected <> a.actual
 ;
 
--- CI visibility: print mismatch details if any
-SELECT *
+-- ----------------------------------------------------------------------------
+-- Visual log separator + blank line for clean separation in CI artifacts
+-- ----------------------------------------------------------------------------
+.mode list
+.separator ''
+.headers off
+SELECT REPEAT('=', 29) || ' START OF TEST FILE: tests/02_recon_counts.sql ' || REPEAT('=', 29);
+SELECT ' ';
+-- ----------------------------------------------------------------------------
+-- For CI visibility: print any failures immediately as table (appears in logs)
+-- ----------------------------------------------------------------------------
+.mode table
+.headers on
+SELECT 
+*
 FROM recon_counts_failures
 ;
-
--- Assertion: fail script (and CI job) with descriptive message using reliable concatenation
--- Uses || instead of format() to guarantee substitution even in strict/older DuckDB contexts
+-- ----------------------------------------------------------------------------
+-- Final verdict line — outputs ✅ PASS or ❌ FAIL for easy log scanning
+-- Uses plain text (no runtime error on FAIL) so all tests execute serially
+-- CI workflow greps for 'FAIL:' to detect issues after the full run
+-- ----------------------------------------------------------------------------
+.mode list
+.separator ''
+.headers off
 SELECT
     CASE
         WHEN (SELECT COUNT(*) FROM recon_counts_failures) = 0
-            THEN 'PASS: Row count in overdose_cohort matches expected qualifying cohort (n = ' ||
+            THEN '✅ PASS: Row count in overdose_cohort matches expected qualifying cohort (n = ' ||
                  (SELECT expected::VARCHAR FROM recon_expected_count) || ')'
         ELSE
-            'FAIL: Row count mismatch in overdose_cohort. ' ||
+            '❌ FAIL: Row count mismatch in overdose_cohort. ' ||
             'Expected: ' || (SELECT expected::VARCHAR FROM recon_expected_count) || ', ' ||
             'Actual: '   || (SELECT actual::VARCHAR FROM recon_actual_count)   || ', ' ||
             'Difference: ' || (SELECT difference::VARCHAR FROM recon_counts_failures) || '. ' ||
             'See table above.'
     END AS test_status
 ;
+-- ----------------------------------------------------------------------------
+-- File end marker plus extra blanklines between this and next test
+-- ----------------------------------------------------------------------------
+SELECT ' ';
+SELECT REPEAT('=', 30) || ' END OF TEST FILE: tests/02_recon_counts.sql ' || REPEAT('=', 30);
+SELECT ' ';
+SELECT ' ';
+-- End of test — next test output follows after blank lines
