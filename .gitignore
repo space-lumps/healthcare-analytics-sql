@@ -4,18 +4,24 @@
 # --- Secrets ---
 .env
 
-# --- Data ---
+# --- Production data ---
 datasets/prod/
-output/
+
+# --- Generated runtime artifacts (temporary / local / testing outputs — never commit) ---
+output/inferred_types_snapshot.csv
+output/readmissions_arg_min_output.csv
+output/readmissions_rn_output.csv
+
+# Final pipeline outputs — these are committed to show results
+# output/overdose_cohort.csv
 
 # --- Local DB artifacts ---
 *.duckdb
+*.duckdb.wal
+*.duckdb-journal
 
 # --- Logs ---
 *.log
-
-# --- Docs / local working files ---
-docs/data-dictionary.xlsx
 
 # --- Local-only test outputs / scratch ---
 sql/pipeline/tests/sample_data/
