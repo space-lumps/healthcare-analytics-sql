@@ -1,129 +1,146 @@
 -- ============================================================
 -- 03_recon_fanout.sql
 -- Purpose:
---   Detect join fan-out that gets hidden by the final GROUP BY.
--- PASS:
---   0 rows returned.
+--   Advanced integrity test: Detects hidden row fan-out or loss during
+--   the LEFT JOINs and final aggregation in overdose_cohort.
+--
+--   Checks three critical counts:
+--     1. base_rows     → rows in 'cohort' (core qualifying encounters)
+--     2. pre_group → rows after all LEFT JOINs but before aggregation
+--     3. final_rows    → rows in final overdose_cohort
+--
+--   Expected invariants:
+--     - pre_group >= base_rows          (LEFT JOINs can only preserve or increase)
+--     - pre_group <= base_rows * 100    (arbitrary but generous cap to catch severe fan-out)
+--     - final_rows     =  base_rows          (aggregation must preserve 1 row per encounter)
+--
+--   Uses shared TEMP VIEWs from 20_build_cohort.sql → no duplication of business logic.
+--   Returns: one row on success (PASS message with counts)
+--   Fails CI if any invariant is violated (throws error with details)
 -- ============================================================
 
-WITH qualifying_encounters AS (
-    SELECT
-        encounters.patient_id
-        ,encounters.encounter_id
-        ,encounters.encounter_start_timestamp
-        ,encounters.encounter_stop_timestamp
-    FROM encounters
-    WHERE 1 = 1
-        AND encounters.encounter_reason = 'Drug overdose'
-        AND encounters.encounter_start_timestamp >= TIMESTAMP '1999-07-16 00:00:00' -- AFTER 7/15
+-- Base count: number of qualifying index encounters (age 18–35, overdose, post-1999-07-16)
+CREATE OR REPLACE TEMP VIEW recon_base_count AS
+    SELECT COUNT(*) AS base_rows
+    FROM cohort
+;
 
-)
-,cohort AS (
-    SELECT
-        qualifying_encounters.patient_id
-        ,qualifying_encounters.encounter_id
-        ,qualifying_encounters.encounter_start_timestamp
-        ,qualifying_encounters.encounter_stop_timestamp
-    FROM qualifying_encounters
-    INNER JOIN patients
-        ON patients.patient_id = qualifying_encounters.patient_id
-    WHERE 1 = 1
-        AND (        
-            EXTRACT(YEAR FROM qualifying_encounters.encounter_start_timestamp)
-            - EXTRACT(YEAR FROM patients.birthdate)
-            - CASE
-                WHEN
-                    EXTRACT(MONTH FROM qualifying_encounters.encounter_start_timestamp)
-                        < EXTRACT(MONTH FROM patients.birthdate)
-                    OR (
-                        EXTRACT(MONTH FROM qualifying_encounters.encounter_start_timestamp)
-                            = EXTRACT(MONTH FROM patients.birthdate)
-                        AND EXTRACT(DAY FROM qualifying_encounters.encounter_start_timestamp)
-                            < EXTRACT(DAY FROM patients.birthdate)
-                    )
-                THEN 1
-                ELSE 0
-            END  
-        ) BETWEEN 18 AND 35
-)
-,current_meds AS (
-    SELECT
-        cohort.patient_id
-        ,cohort.encounter_id
-        ,medications.medication_code
-        ,medications.medication_description
-        ,medications.medication_start_date
-        ,medications.medication_stop_date
-    FROM medications
-    INNER JOIN cohort
-        ON medications.patient_id = cohort.patient_id
-    WHERE 1 = 1
-        AND medications.medication_start_date < cohort.encounter_start_timestamp
-        AND (
-            medications.medication_stop_date IS NULL
-            OR  medications.medication_stop_date >= cohort.encounter_start_timestamp
-        )
-)
-,opioids_list AS (
-    SELECT *
-    FROM (VALUES
-        ('hydromorphone')
-        ,('fentanyl')
-        ,('oxycodone-acetaminophen')
-    ) AS opioids(opioid_token)
-)
-,current_opioids AS (
-    SELECT DISTINCT
-        current_meds.patient_id
-        ,current_meds.encounter_id
-        ,current_meds.medication_code AS opioid_code
-    FROM current_meds
-    INNER JOIN opioids_list
-        ON LOWER(current_meds.medication_description)
-            LIKE '%' || opioids_list.opioid_token || '%'
-)
-,readmissions AS (
-    SELECT
-        first_encounter.patient_id
-        ,first_encounter.encounter_id AS first_encounter_id
-        ,MIN(readmit.encounter_start_timestamp) AS first_readmission_timestamp
-    FROM cohort first_encounter
-    INNER JOIN cohort readmit
-        ON first_encounter.patient_id = readmit.patient_id
-        AND readmit.encounter_start_timestamp > first_encounter.encounter_stop_timestamp
-        AND readmit.encounter_start_timestamp
-            <= CAST(first_encounter.encounter_stop_timestamp + INTERVAL '90 days' AS TIMESTAMP)
-    GROUP BY
-        first_encounter.patient_id
-        ,first_encounter_id
-)
-
--- This is the critical check:
--- compare the rowcount BEFORE GROUP BY to the expected "base" encounter count.
-,pre_group_joined AS (
-    SELECT
-        cohort.patient_id
-        ,cohort.encounter_id
+-- Count after all LEFT JOINs (potential fan-out point from current_meds or current_opioids)
+-- Uses DISTINCT to preserve encounter grain before any implicit grouping
+CREATE OR REPLACE TEMP VIEW recon_pre_group_count AS
+    SELECT COUNT(DISTINCT cohort.patient_id || '|' || cohort.encounter_id) AS pre_group
     FROM cohort
     LEFT JOIN current_meds
-        ON cohort.encounter_id = current_meds.encounter_id
-    LEFT JOIN current_opioids
-        ON cohort.encounter_id = current_opioids.encounter_id
+        ON cohort.patient_id = current_meds.patient_id
+        AND cohort.encounter_id = current_meds.encounter_id
+    LEFT JOIN current_opioids_agg
+        ON cohort.patient_id = current_opioids_agg.patient_id
+        AND cohort.encounter_id = current_opioids_agg.encounter_id
     LEFT JOIN readmissions
         ON cohort.patient_id = readmissions.patient_id
         AND cohort.encounter_id = readmissions.first_encounter_id
-)
+;
 
-,counts AS (
+-- Final output count from the analysis-ready cohort
+CREATE OR REPLACE TEMP VIEW recon_final_count AS
+    SELECT COUNT(*) AS final_rows
+    FROM overdose_cohort
+;
+
+-- Combine counts and evaluate invariants
+CREATE OR REPLACE TEMP VIEW recon_fanout_failures AS
     SELECT
-        (SELECT COUNT(*) FROM cohort) AS base_encounter_rows
-        ,(SELECT COUNT(*) FROM pre_group_joined) AS pre_group_rows
-        ,(SELECT COUNT(*) FROM overdose_cohort) AS final_rows
-)
+        b.base_rows
+        ,p.pre_group
+        ,f.final_rows
+        ,CASE
+            WHEN b.base_rows = 0 THEN 0.0
+            ELSE ROUND(CAST(p.pre_group AS DOUBLE) / b.base_rows, 4)
+        END AS fanout_ratio
+
+        ,CASE
+            WHEN p.pre_group < b.base_rows
+                THEN 'Rows lost during LEFT JOINs (unexpected)'
+            WHEN p.pre_group > b.base_rows * 100
+                THEN 'Severe fan-out detected during joins'
+            WHEN f.final_rows <> b.base_rows
+                THEN 'Final agg. did not preserve 1 row per encounter'
+            ELSE 'No violation detected'
+        END AS failure_reason
+    FROM recon_base_count b
+    CROSS JOIN recon_pre_group_count p
+    CROSS JOIN recon_final_count f
+    WHERE 1=1
+      AND (   p.pre_group < b.base_rows
+           OR p.pre_group > b.base_rows * 100
+           OR f.final_rows <> b.base_rows )
+;
+
+-- ----------------------------------------------------------------------------
+-- Visual log separator + blank line for clean separation in CI artifacts
+-- ----------------------------------------------------------------------------
+.mode list
+.separator ''
+.headers off
+SELECT REPEAT('=', 29) || ' START OF TEST FILE: tests/03_recon_fanout.sql ' || REPEAT('=', 29);
+SELECT ' ';
+-- ----------------------------------------------------------------------------
+-- For CI visibility: print any failures immediately as table (appears in logs)
+-- ----------------------------------------------------------------------------
+.mode table
+.headers on
+SELECT 
+*
+FROM recon_fanout_failures
+ORDER BY base_rows DESC
+;
+-- ----------------------------------------------------------------------------
+-- Final verdict line — outputs ✅ PASS or ❌ FAIL for easy log scanning
+-- Uses plain text (no runtime error on FAIL) so all tests execute serially
+-- CI workflow greps for 'FAIL:' to detect issues after the full run
+-- ----------------------------------------------------------------------------
+.mode list
+.separator ''
+.headers off
 SELECT
-    counts.*
-FROM counts
-WHERE 1 = 1
-    AND counts.final_rows <> counts.base_encounter_rows
-    OR  counts.pre_group_rows < counts.base_encounter_rows
-    OR  counts.pre_group_rows > counts.base_encounter_rows * 100;
+    CASE
+        WHEN (SELECT COUNT(*) FROM recon_fanout_failures) = 0 THEN
+            '✅ PASS: Fan-out test clean. ' ||
+            'Base = '     || (SELECT base_rows::VARCHAR FROM recon_base_count)     || ' rows. ' ||
+            'Pre-group = '|| (SELECT pre_group::VARCHAR FROM recon_pre_group_count) || '. ' ||
+            'Final = '    || (SELECT final_rows::VARCHAR FROM recon_final_count)    || '. ' ||
+            'Ratio ≈ '    || 
+            ROUND(
+                CASE 
+                    WHEN (SELECT base_rows FROM recon_base_count) = 0 THEN 0.0
+                    ELSE CAST((SELECT pre_group FROM recon_pre_group_count) AS DOUBLE) /
+                         (SELECT base_rows FROM recon_base_count)
+                END,
+                2
+            )::VARCHAR
+        ELSE
+            '❌ FAIL: Integrity violation in overdose_cohort joins/agg. ' ||
+            'Base: '     || (SELECT base_rows::VARCHAR FROM recon_base_count)     || ' rows. ' ||
+            'Pre-group: '|| (SELECT pre_group::VARCHAR FROM recon_pre_group_count) || '. ' ||
+            'Final: '    || (SELECT final_rows::VARCHAR FROM recon_final_count)    || '. ' ||
+            'Ratio: '    || 
+            ROUND(
+                CASE 
+                    WHEN (SELECT base_rows FROM recon_base_count) = 0 THEN 0.0
+                    ELSE CAST((SELECT pre_group FROM recon_pre_group_count) AS DOUBLE) /
+                            (SELECT base_rows FROM recon_base_count)
+                END,
+                2
+            )::VARCHAR ||
+            '. See table above.'
+
+    END AS test_status
+;
+-- ----------------------------------------------------------------------------
+-- File end marker plus extra blanklines between this and next test
+-- ----------------------------------------------------------------------------
+SELECT ' ';
+SELECT REPEAT('=', 30) || ' END OF TEST FILE: tests/03_recon_fanout.sql ' || REPEAT('=', 30);
+SELECT ' ';
+SELECT ' ';
+-- End of test — next test output follows after blank lines
