@@ -33,6 +33,7 @@ COPY (
         ,readmission_30_day_ind         AS READMISSION_30_DAY_IND
         ,first_readmission_timestamp    AS FIRST_READMISSION_DATE
     FROM overdose_cohort
+    ORDER BY encounter_start_timestamp, patient_id, encounter_id
 ) TO '../../output/overdose_cohort.csv'
 WITH (
     HEADER
