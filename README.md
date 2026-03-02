@@ -1,6 +1,7 @@
 # Healthcare Analytics - Clinical Cohort Construction in SQL
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![CI - Smoke Test](https://github.com/space-lumps/healthcare-analytics-sql/actions/workflows/smoke-test.yml/badge.svg)](https://github.com/space-lumps/healthcare-analytics-sql/actions/workflows/smoke-test.yml)
+[![CI - Smoke Test](https://github.com/space-lumps/healthcare-analytics-sql/actions/workflows/sql-pipeline-smoke.yml/badge.svg)](https://github.com/space-lumps/healthcare-analytics-sql/actions/workflows/sql-pipeline-smoke.yml)
+[![CI - Validation Test](https://github.com/space-lumps/healthcare-analytics-sql/actions/workflows/sql-pipeline-validation.yml/badge.svg)](https://github.com/space-lumps/healthcare-analytics-sql/actions/workflows/sql-pipeline-validation.yml)
 [![DuckDB](https://img.shields.io/badge/DuckDB-1.1+-yellow?logo=duckdb&logoColor=white)](https://duckdb.org/)
 [![DuckDB Dialect](https://img.shields.io/badge/DuckDB%20Dialect-blue?logo=duckdb&logoColor=white)](https://duckdb.org/docs/sql/introduction)
 
