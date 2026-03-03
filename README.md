@@ -12,6 +12,7 @@
 - [Cohort Definition](#cohort-definition)
 - [Metrics & Features Produced](#metrics--features-produced)
 - [Validation & QA](#validation--qa)
+- [Continuous Integration](#continuous-integration)
 - [Repository Structure](#repository-structure)
 - [How to Run](#how-to-run)
 - [Data](#data)
@@ -97,6 +98,39 @@ Key validated findings include:
 Validation logic lives alongside the pipeline and can be run independently.
 Validation summary is documented in `docs/validation_summar.md`
 * Tests with the `recon` prefix independently recompute cohort-selection logic before downstream schema and metric validation.
+
+---
+
+### Continuous Integration
+
+This repository uses **GitHub Actions** to automatically validate the SQL pipeline on pushes to `main` or `refactor/*` branches, and on pull requests targeting `main`. Two complementary workflows provide layered protection: quick syntax/output checks for speed, and deeper data quality validation for confidence.
+
+Two complementary workflows are defined in `.github/workflows/`:
+
+#### 1. Smoke Pipeline Checks (`sql-pipeline-smoke.yml`)
+
+This lightweight workflow runs on every relevant push and pull request, and serves as a fast "does it still build and produce output?" gate.
+
+- **Build & Schema Check** — Executes the full pipeline (normalization → cohort building → feature derivation) in a clean DuckDB environment and verifies that:
+  - All SQL scripts parse without syntax errors
+  - Expected tables/views are created with the correct schema (column names, types, grain)
+
+- **Validate Output CSV** — Confirms that the final output CSV is generated successfully and contains the expected columns/structure (basic row count and header validation).
+
+Purpose: Detect breaking changes quickly so feedback arrives early in development or review cycles.
+
+#### 2. Full Validation Pipeline (`sql-pipeline-validation.yml`)
+
+This more comprehensive workflow is also triggered by the same events (and can be manually dispatched if needed). It focuses on deep data quality assurance.
+
+- **Data Quality Checks** — Executes nearly all SQL test queries located in `sql/pipeline/tests/` **in serial** (one after another) against the pipeline output.  
+  - Executes the automated data quality tests from `sql/pipeline/tests/` against the pipeline output  
+  (includes grain/consistency checks, source-to-derived reconciliation, null & duplicate scans, and key business logic validations such as readmission flags and age calculations)
+  - Excludes `40_final_sanity.sql`, which remains reserved for manual / ad-hoc review
+
+**Purpose:** Ensures core analytics logic, feature derivations, and data invariants stay correct through refactors, logic updates, or schema changes.
+
+Together, these workflows enforce deterministic, testable SQL practices and help deliver production-grade reliability in an open-source healthcare analytics project.
 
 ---
 
