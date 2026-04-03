@@ -11,6 +11,8 @@ datasets/prod/
 output/inferred_types_snapshot.csv
 output/readmissions_arg_min_output.csv
 output/readmissions_rn_output.csv
+output/sample_output.csv
+output/sample_*.csv
 
 # Final pipeline outputs — these are committed to show results
 # output/overdose_cohort.csv
