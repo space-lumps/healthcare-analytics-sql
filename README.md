@@ -8,11 +8,7 @@
 <div align="center">
   <img
     src="assets/images/healthcare-cohort-validation-summary.png"
-    alt="Healthcare Cohort Validation Summary"
-    style="border: 1px solid #707070;
-           border-radius: 10px;
-           background-color: #161B22;
-           padding: 8px;">
+    alt="Healthcare Cohort Validation Summary">
 </div>
 
 ## Table of Contents
