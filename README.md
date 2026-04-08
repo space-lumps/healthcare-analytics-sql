@@ -5,7 +5,15 @@
 [![DuckDB](https://img.shields.io/badge/DuckDB-1.1+-yellow?logo=duckdb&logoColor=white)](https://duckdb.org/)
 [![Latest Release](https://img.shields.io/github/v/release/space-lumps/healthcare-analytics-sql?color=brightgreen&logo=github)](https://github.com/space-lumps/healthcare-analytics-sql/releases/latest)
 
-![Healthcare Cohort Validation Summary](assets/images/healthcare-cohort-validation-summary.png)
+<div align="center">
+  <img
+    src="assets/images/healthcare-cohort-validation-summary.png"
+    alt="Healthcare Cohort Validation Summary"
+    style="border: 1px solid #707070;
+           border-radius: 10px;
+           background-color: #161B22;
+           padding: 8px;">
+</div>
 
 ## Table of Contents
 
