@@ -1,11 +1,25 @@
 # --- OS / editor ---
 .DS_Store
+.vscode/
+.idea/
+.cursor/
 
-# --- Secrets ---
+# --- Python virtual environment ---
+.venv/
+venv/
+ENV/
+
+# --- Local development tools & scripts ---
+tools/
+
+# --- Secrets & credentials ---
 .env
+*.env
 
-# --- Production data ---
-datasets/prod/
+# --- Local DB artifacts ---
+*.duckdb
+*.duckdb.wal
+*.duckdb-journal
 
 # --- Generated runtime artifacts (temporary / local / testing outputs — never commit) ---
 output/inferred_types_snapshot.csv
@@ -14,16 +28,15 @@ output/readmissions_rn_output.csv
 output/sample_output.csv
 output/sample_*.csv
 
+# --- Temporary test data ---
+sql/pipeline/tests/sample_data/
+
 # Final pipeline outputs — these are committed to show results
 # output/overdose_cohort.csv
 
-# --- Local DB artifacts ---
-*.duckdb
-*.duckdb.wal
-*.duckdb-journal
-
 # --- Logs ---
 *.log
+logs/
 
-# --- Local-only test outputs / scratch ---
-sql/pipeline/tests/sample_data/
+# --- Production data ---
+datasets/prod/

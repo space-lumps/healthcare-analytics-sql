@@ -5,20 +5,26 @@
 [![DuckDB](https://img.shields.io/badge/DuckDB-1.1+-yellow?logo=duckdb&logoColor=white)](https://duckdb.org/)
 [![Latest Release](https://img.shields.io/github/v/release/space-lumps/healthcare-analytics-sql?color=brightgreen&logo=github)](https://github.com/space-lumps/healthcare-analytics-sql/releases/latest)
 
+![Healthcare Cohort Validation Summary](assets/images/healthcare-cohort-validation-summary.png)
+
 ## Table of Contents
 
-- [Overview](#overview)
-- [Objective](#objective)
-- [Cohort Definition](#cohort-definition)
-- [Metrics & Features Produced](#metrics--features-produced)
-- [Validation & QA](#validation--qa)
-- [Continuous Integration](#continuous-integration)
-- [Repository Structure](#repository-structure)
-- [How to Run](#how-to-run)
-- [Data](#data)
-- [Design Philosophy](#design-philosophy)
-- [Key Takeaways & Lessons Learned](#key-takeaways--lessons-learned)
-- [License](#license)
+- [Healthcare Analytics - Clinical Cohort Construction in SQL](#healthcare-analytics---clinical-cohort-construction-in-sql)
+  - [Table of Contents](#table-of-contents)
+    - [Overview](#overview)
+    - [Objective](#objective)
+    - [Cohort Definition](#cohort-definition)
+    - [Metrics \& Features Produced](#metrics--features-produced)
+    - [Validation \& QA](#validation--qa)
+    - [Continuous Integration](#continuous-integration)
+      - [1. Smoke Pipeline Checks (`sql-pipeline-smoke.yml`)](#1-smoke-pipeline-checks-sql-pipeline-smokeyml)
+      - [2. Full Validation Pipeline (`sql-pipeline-validation.yml`)](#2-full-validation-pipeline-sql-pipeline-validationyml)
+    - [Repository Structure](#repository-structure)
+    - [How to Run](#how-to-run)
+    - [Data](#data)
+    - [Design Philosophy](#design-philosophy)
+    - [Key Takeaways \& Lessons Learned](#key-takeaways--lessons-learned)
+    - [License](#license)
 
 ---
 
